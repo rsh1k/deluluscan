@@ -6,7 +6,7 @@ web, API, application, container/Kubernetes, cloud, and **LLM/AI-system** target
 [![PyPI](https://img.shields.io/pypi/v/deluluscan.svg)](https://pypi.org/project/deluluscan/)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-68_suites_green-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-65_suites_green-brightgreen.svg)](tests/)
 [![Local AI](https://img.shields.io/badge/AI-Claude%20%7C%20OpenAI%20%7C%20DeepSeek%20%7C%20Ollama-8a2be2.svg)](docs/LOCAL_MODELS.md)
 
 Deluluscan automates the mechanical phases of an assessment — discovery, fingerprinting,
@@ -36,16 +36,24 @@ leaves your host.
   *execute*; the live verifier *decides truth*. It never overwrites a re-test result.
 - **Runs on your terms.** Pluggable AI backends — Anthropic, OpenAI, **DeepSeek**, **Ollama
   (fully offline)**, Claude Code, Codex, Bedrock — with **secret redaction before send**.
+- **Knows what it's testing.** Fingerprints the platform (23 profiles — WordPress/Drupal/
+  Joomla, Laravel/Django/Rails/Spring/Tomcat, Jenkins/GitLab/Grafana/Kibana, Elasticsearch/
+  Kubernetes, …) and tests it accordingly: its API shape, auth model, sensitive surfaces,
+  and **version-gated known CVEs** (Nessus-plugin model). Detects the **edge** too — WAF/CDN
+  (18 vendors: Cloudflare/Akamai/Fastly/Imperva/…), open ports/services, honeypot & IDS/IPS.
 - **Broad coverage, one tool.** Web · API (REST/GraphQL/WebSocket/gRPC) · headers/CORS/cookies
-  · secrets · **LLM/AI systems (OWASP LLM Top 10)** · containers/K8s · cloud (CSPM) · source
-  (SAST) · API specs.
+  · secrets · **passive analysis (ZAP-style)** · **JS/SPA endpoint discovery (static + optional
+  headless-browser crawl)** · **LLM/AI systems (OWASP LLM Top 10)** · containers/K8s · cloud
+  (CSPM) · source (SAST) · API specs.
 
 ## Install
 
 ```bash
 pip install deluluscan            # from PyPI
-# optional extras: bedrock (AWS), web (FastAPI UI), xlsx (Excel export), or everything:
+# optional extras: bedrock (AWS), web (FastAPI UI), xlsx (Excel export),
+#   crawler (headless-browser dynamic crawl), or everything:
 pip install "deluluscan[all]"
+# the crawler extra also needs a browser binary:  playwright install chromium
 ```
 
 Or from source:
@@ -78,8 +86,12 @@ for running a model on a low-RAM / WSL / non-NVIDIA machine.
 
 | Domain | Module | What it does |
 |---|---|---|
-| **Web / API scanning** | `scanners/`, `verify/` | 40+ checks across the OWASP API/Web Top 10, with a deep differential verification layer (identity matrix, filter-bypass, read-back sink classification, weaponizability grading). |
-| **Reconnaissance** | `recon/` | Tech/JS-library fingerprint (+ known-vulnerable versions), CT-log subdomain enumeration, content discovery. |
+| **Web / API scanning** | `scanners/`, `verify/` | 43 checks across the OWASP API/Web Top 10, with a deep differential verification layer (identity matrix, filter-bypass, read-back sink classification, weaponizability grading). Burp-style Intruder (sniper/battering-ram/pitchfork/cluster-bomb). |
+| **Reconnaissance** | `recon/` | Tech/JS-library fingerprint (+ known-vulnerable versions), CT-log subdomain enumeration, content discovery, and **static JS endpoint extraction** (fetch/axios/XHR → shadow API surface). |
+| **Platform intelligence** | `platforms/` | Fingerprints **23 platforms** (WordPress/Drupal/Joomla, Laravel/Django/Rails/Spring/Tomcat, Jenkins/GitLab/Grafana/Kibana, Elasticsearch/Kubernetes, …) → API shape, auth model, sensitive surfaces, user-enum & version disclosure, plus **version-gated known CVEs** (Nessus-plugin model). |
+| **Edge / network recon** | `netscan/` | WAF/CDN/proxy detection (**18 vendors**, wafw00f-style passive+active), TCP port/service scan + banner grab, honeypot heuristics, IDS/IPS inference. |
+| **Passive analysis** | `passive/` | ZAP-style, no extra requests — stack traces / SQL errors, debug consoles (Werkzeug/Whoops/Django), directory listing, internal-IP & secrets-in-URL, HTML-comment leaks. Runs over every collected response. |
+| **Dynamic crawl** | `crawler/` | Optional headless-browser (Playwright) AJAX-spider: renders JS-heavy apps and captures the API calls the client actually makes — the dynamic surface a static parse can't resolve. |
 | **HTTP hardening** | `headers/` | Security headers, CORS (wildcard / reflected-origin-with-credentials), cookie flags. |
 | **Secrets** | `secrets/` | Credential exposure in responses & JS (AWS/GitHub/Google/Slack/Stripe/… + entropy-gated generic), matched **masked**. |
 | **Deeper web/API** | `webapi/` | GraphQL introspection → surface map, WebSocket CSWSH, gRPC reflection. |
@@ -95,7 +107,11 @@ for running a model on a low-RAM / WSL / non-NVIDIA machine.
 | **Reporting** | `assess/`, `reporting/` | Merge findings → local **Markdown / HTML / JSON / SARIF / CSV / XLSX / JUnit**. No online publishing. |
 
 Each capability also has a standalone CLI, e.g. `python3 -m deluluscan.recon --url …`,
+`python3 -m deluluscan.platforms --url …`, `python3 -m deluluscan.netscan --url …`,
+`python3 -m deluluscan.passive --url …`, `python3 -m deluluscan.crawler --url …`,
 `python3 -m deluluscan.container --path ./deploy`, `python3 -m deluluscan.llm --provider ollama …`.
+See **[docs/PLATFORM_INTELLIGENCE.md](docs/PLATFORM_INTELLIGENCE.md)** for the platform/edge
+detection design and a Nessus/Burp/ZAP capability map.
 
 ## Design principles
 
