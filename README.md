@@ -8,6 +8,7 @@ web, API, application, container/Kubernetes, cloud, and **LLM/AI-system** target
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab.svg)](https://www.python.org/)
 [![Tests](https://img.shields.io/badge/tests-65_suites_green-brightgreen.svg)](tests/)
 [![Local AI](https://img.shields.io/badge/AI-Claude%20%7C%20OpenAI%20%7C%20DeepSeek%20%7C%20Ollama-8a2be2.svg)](docs/LOCAL_MODELS.md)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 Deluluscan automates the mechanical phases of an assessment — discovery, fingerprinting,
 active/passive scanning, known-CVE checks, and **evidence-based verification** — and
@@ -128,6 +129,22 @@ detection design and a Nessus/Burp/ZAP capability map.
 - **Out-of-tree plugins** load from a directory (`deluluscan/plugins.py`); **Nuclei-style YAML
   templates** drop into `templates/` (`deluluscan/templates.py`) with no code.
 - Run the tests: `python3 -m tests.<suite>` (e.g. `test_verify`, `test_llm_pentest`, `test_recon`).
+
+## Contributing
+
+**Contributions are very welcome** — Deluluscan gets better every time someone adds
+a platform signature, a detection rule, a known CVE, or a scanner. Many additions
+are **just data** (no engine code): a platform profile, a WAF/CDN signature, a CVE,
+a passive rule, a Nuclei-style YAML template. See **[CONTRIBUTING.md](CONTRIBUTING.md)**
+for the extension points, dev setup, and how to run the tests.
+
+- New here? Look for [`good first issue`](https://github.com/rsh1k/deluluscan/labels/good%20first%20issue)
+  and [`help wanted`](https://github.com/rsh1k/deluluscan/labels/help%20wanted).
+- Found a bug or have an idea? [Open an issue](https://github.com/rsh1k/deluluscan/issues/new/choose).
+- Every contribution must keep Deluluscan **defensive and authorized-testing only** —
+  the authorization boundary stays, and we *confirm to proof, never weaponize*.
+- Found a security issue **in Deluluscan itself**? Please report it privately — see
+  **[SECURITY.md](SECURITY.md)**.
 
 ## License
 
