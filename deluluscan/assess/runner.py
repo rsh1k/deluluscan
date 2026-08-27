@@ -56,19 +56,39 @@ class Assessment:
         }
 
 
+def _http_get(url: str):
+    """Minimal (status, headers, body) fetch for modules that need one response."""
+    import urllib.request
+    req = urllib.request.Request(url, headers={"User-Agent": "deluluscan-assess"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return r.status, dict(r.headers), r.read(200_000).decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        return e.code, dict(e.headers or {}), (e.read(80_000).decode("utf-8", "replace") if e.fp else "")
+    except Exception:
+        return 0, {}, ""
+
+
 def run_web_assessment(target: str, *, domain: Optional[str] = None,
                        graphql_url: Optional[str] = None,
                        modules: Optional[list] = None,
                        sast_path: Optional[str] = None,
                        spec_path: Optional[str] = None,
+                       netscan_ports: bool = False,
                        recon_fetch: Optional[Callable] = None,
                        header_fetch: Optional[Callable] = None,
                        secret_fetch: Optional[Callable] = None,
-                       gql_fetch: Optional[Callable] = None) -> Assessment:
-    """Live-run the web-facing modules (recon, headers, secrets, webapi) and merge.
-    Pass the *_fetch args to run offline in tests."""
+                       gql_fetch: Optional[Callable] = None,
+                       netscan_fetch: Optional[Callable] = None,
+                       netscan_connect: Optional[Callable] = None,
+                       passive_fetch: Optional[Callable] = None) -> Assessment:
+    """Live-run the web-facing modules and merge. recon auto-folds platform
+    intelligence + version-gated CVEs + passive edge detection; netscan adds
+    active WAF/CDN + honeypot + IDS/IPS (+ ports when netscan_ports=True); passive
+    adds response-body analysis. Pass the *_fetch args to run offline in tests."""
     mods = modules if modules is not None else (
-        ["recon", "headers", "secrets"] + (["webapi"] if graphql_url else []))
+        ["recon", "headers", "secrets", "netscan", "passive"]
+        + (["webapi"] if graphql_url else []))
     a = Assessment(target)
 
     if "recon" in mods:
@@ -95,6 +115,20 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
             except Exception:
                 return r.status_code, {}
         a.add(WebApiScan().graphql(gql_fetch or _gql_default, graphql_url), "webapi")
+
+    if "netscan" in mods:
+        from ..netscan.engine import NetScan
+        ns = NetScan(fetch=netscan_fetch, connect=netscan_connect)
+        prof = ns.run(target, do_ports=netscan_ports)   # edge always; ports opt-in
+        a.add(ns.to_findings(prof), "netscan")
+
+    if "passive" in mods:
+        from ..passive.engine import PassiveScan
+        status, headers, body = (passive_fetch or _http_get)(target)
+        if body:
+            a.add(PassiveScan().analyze(status, target, headers, body), "passive")
+        else:
+            a.modules_run.append("passive")
 
     # source + contract (offline; run whenever a path is supplied, independent of `mods`)
     if sast_path:

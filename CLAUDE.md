@@ -105,8 +105,11 @@ via `--mantis-findings-dir` when the corpus exists.
   vuln-class-specific probes on top for the ones a source finding maps to.
 
 - `deluluscan/assess/` — unified assessment + multi-format LOCAL report (WS-glue):
-  `runner.py` (`Assessment`/`run_web_assessment`: run recon+headers+secrets+webapi,
-  merge + dedup findings -> payload), `report.py` (`write_reports`: JSON/Markdown/
+  `runner.py` (`Assessment`/`run_web_assessment`: run recon [auto-folds platform
+  intelligence + version-gated CVEs + passive edge detection] + headers + secrets +
+  netscan [WAF/CDN + honeypot + IDS; ports opt-in via `--netscan-ports`] + passive
+  [response-body analysis] + webapi, merge + dedup findings -> payload),
+  `report.py` (`write_reports`: JSON/Markdown/
   self-contained HTML + CSV/XLSX/JUnit via reporting.exporters + SARIF; local files
   only, no publishing). CLI: `python3 -m deluluscan.assess --url … [--sast-path ./src] [--spec openapi.json]
   --formats md,html,json` (merges live web + source SAST + API-spec findings).
@@ -237,6 +240,9 @@ via `--mantis-findings-dir` when the corpus exists.
   runs rules + folds in `secrets.scan_text`; covers what headers/ & secrets/ don't).
   Runs over responses already captured, so it can analyze every response for free.
   CLI: `python3 -m deluluscan.passive --url … | --stdin`. `tests/test_passive.py`.
+  Wired two ways: (1) `deluluscan/assess/runner.py` runs it as a `passive` module;
+  (2) the in-scan `scanners/passive.py` `PassiveScanner` folds these body rules over
+  every collected response during a full orchestrator scan (deduped once per rule).
 - `deluluscan/agentic/` — exploitation-chain agent (WS-2): `capabilities.py`
   (allowlisted safe primitives via injected toolbox), `agent.py` (`ExploitChainAgent`:
   bounded observe->act->verify loop, step budget, state-changing opt-in + approval gate,
