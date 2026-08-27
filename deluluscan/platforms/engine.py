@@ -154,6 +154,7 @@ class PlatformScan:
                         evidence=[rec], confidence="confirmed",
                         detail={"platform": p.name, "version": m.group(1),
                                 "remediation": p.remediation}))
+                    findings.extend(self._cve_findings(p, m.group(1), rec))
 
         # -- exposed control / RPC / admin surfaces (data-driven) -----------
         _sev = {"info": Severity.INFO, "low": Severity.LOW, "medium": Severity.MEDIUM,
@@ -181,6 +182,31 @@ class PlatformScan:
                     detail={"platform": p.name, "status": rec.status,
                             "remediation": p.remediation}))
         return findings
+
+    def _cve_findings(self, p, version: str, ver_rec: RequestRecord) -> list:
+        """Version-gated known-CVE findings (Nessus-plugin model). A version match
+        is a LEAD, not proof: graded firm/likely_true_positive but exploitability
+        stays 'unknown' — the report asserts the running version is in the affected
+        range, never that the CVE is live-exploitable, until a probe confirms it."""
+        from .cves import match_cves
+        _sev = {"info": Severity.INFO, "low": Severity.LOW, "medium": Severity.MEDIUM,
+                "high": Severity.HIGH, "critical": Severity.CRITICAL}
+        out = []
+        for r in match_cves(p.name, version):
+            out.append(Finding(
+                vuln_class=VulnClass.SUPPLY_CHAIN, severity=_sev.get(r.severity, Severity.HIGH),
+                title=f"{p.name} {version} is in the affected range for {r.cve}",
+                endpoint=p.version_path,
+                description=(f"{r.summary} The fingerprinted version {version} falls in the "
+                             f"affected range ({r.affected}). VERSION-INFERRED — confirm with a "
+                             "live probe before asserting exploitability."),
+                evidence=[ver_rec], confidence="firm",
+                verdict="likely_true_positive", exploitability="unknown",
+                detail={"platform": p.name, "version": version, "cve": r.cve,
+                        "cwe": r.cwe, "affected": r.affected, "fixed_in": r.fixed_in,
+                        "basis": "version_inference", "source": "platforms.cves",
+                        "remediation": f"Upgrade to {r.fixed_in or 'a fixed release'}."}))
+        return out
 
     def run(self, base_url: str):
         """Convenience: identify + assess. Returns (Detection|None, list[Finding])."""

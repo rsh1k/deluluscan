@@ -67,7 +67,25 @@ what a reachable response means:
 | Grafana | `/api/datasources` | high — path-traversal / SSRF history |
 
 A 401/403 on such a path is reported as INFO ("present but access-controlled" — a
-brute-force / auth-bypass target), not a hit. Adding a platform is **data, not
+brute-force / auth-bypass target), not a hit.
+
+## Version-gated CVEs (`cves.py`) — the Nessus plugin model
+
+Once a profile fingerprints an **exact version** (via `version_path`/
+`version_regex`), `match_cves(platform, version)` maps it to publicly-known CVEs
+whose affected range it falls in. `version_in_range` supports composite specs
+(`>=8.0.0,<8.3.1`). Shipped corpus (15 real CVEs) covers Drupal (Drupalgeddon2,
+REST RCE), Joomla, Tomcat (Ghostcat), Spring (Spring4Shell), Jenkins
+(CVE-2024-23897), GitLab (ExifTool RCE, CVE-2023-7028 ATO), Grafana
+(CVE-2021-43798), Confluence (OGNL RCE, CVE-2023-22515), Elasticsearch,
+Kubernetes (CVE-2018-1002105), and Magento.
+
+**Honesty contract (critical):** a version match is a *lead, not proof*. These are
+graded `confidence=firm` / `verdict=likely_true_positive` but
+**`exploitability=unknown`** — the report says "the running version is in the
+affected range for CVE-X", never "the target is exploitable via CVE-X", until a
+live probe confirms it. This is exactly how a credentialed Nessus check reports a
+version-inferred finding. Add a CVE = append a `CveRule` (data, not code). Adding a platform is **data, not
 code**: append a `PlatformProfile` to `deluluscan/platforms/profiles.py`. Cloud
 *posture* (CSPM, IMDS→credential SSRF) is handled by `deluluscan/cloud/`; these
 hosting profiles only flag *where* an app is served so the cloud module can be

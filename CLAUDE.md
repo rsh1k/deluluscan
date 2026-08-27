@@ -209,6 +209,12 @@ via `--mantis-findings-dir` when the corpus exists.
   Atlassian, Elasticsearch/Kubernetes-API, AWS/GCP/Azure hosting). `exposed_checks`
   on a profile = data-driven live probes of its high-risk surfaces (Spring
   `/actuator/heapdump`, Jenkins `/script`, ES `/_cat/indices`, Laravel `/.env`).
+  `cves.py` = version-gated known-CVE corpus (Nessus-plugin model): once a version
+  is fingerprinted, `match_cves` maps it to CVEs whose affected range it's in
+  (`version_in_range` supports `>=8.0,<8.3.1` specs). Graded firm/likely_true_positive
+  but **exploitability="unknown"** — version-inference is a LEAD, not proof; the
+  report says "running version is in the affected range", never "exploitable", until
+  a live probe confirms. Add a CVE = append a `CveRule`.
 - `deluluscan/netscan/` — edge & network reconnaissance (WAF/CDN/proxy, ports,
   honeypot, IDS/IPS): `signatures.py` (data-driven vendor DB — 18 WAF/CDN edges
   incl. Cloudflare/Akamai/Fastly/Imperva/Sucuri/AWS/Azure via cf-ray/x-amz-cf-id/
