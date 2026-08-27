@@ -196,6 +196,12 @@ via `--mantis-findings-dir` when the corpus exists.
   (ReconEngine → web fingerprint, crt.sh subdomains, content discovery → ReconProfile
   → Finding[]). CLI: `python3 -m deluluscan.recon`. `tests/test_recon.py`.
   ReconEngine auto-folds platform intelligence (below) into `ReconProfile.platform`.
+  `jsanalysis.py` (`extract_endpoints`) statically pulls API endpoints from client
+  JS — fetch/axios/$.ajax/XHR calls + API-shaped literals, template params
+  normalized to `{param}` — recovering shadow/undocumented surface (OWASP API9)
+  without a headless browser; ReconEngine follows same-origin `<script>` bundles
+  (`do_js`, bounded by `max_scripts`) → `ReconProfile.js_endpoints` + an INVENTORY
+  finding. `tests/test_jsanalysis.py`.
 - `deluluscan/platforms/` — platform intelligence (know what the target *is*):
   `profiles.py` (data-driven `PlatformProfile`s — WordPress/Drupal/Joomla/Ghost +
   AWS/GCP/Azure hosting — each carrying fingerprint `Signal`s, API base+style, auth

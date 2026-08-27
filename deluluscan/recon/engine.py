@@ -53,6 +53,7 @@ class ReconProfile:
     platform: Optional[dict] = None                    # detected platform intelligence
     platform_findings: list = field(default_factory=list)  # list[Finding]
     edges: list = field(default_factory=list)          # detected WAF/CDN/proxy (passive)
+    js_endpoints: list = field(default_factory=list)   # list[{path, method, kind}] from JS
 
     def to_dict(self) -> dict:
         return {
@@ -64,6 +65,7 @@ class ReconProfile:
             "exposures": self.exposures,
             "platform": self.platform,
             "edges": self.edges,
+            "js_endpoints": self.js_endpoints,
         }
 
     def to_findings(self) -> list[Finding]:
@@ -98,6 +100,21 @@ class ReconProfile:
                 exploitability="conditional"))
         # 3) platform-intelligence findings (user enum, version, exposed surfaces)
         out.extend(self.platform_findings)
+        # 4) shadow API surface recovered from client JS (OWASP API9 inventory)
+        if self.js_endpoints:
+            sample = ", ".join(sorted({e["path"] for e in self.js_endpoints})[:12])
+            out.append(Finding(
+                vuln_class=VulnClass.INVENTORY,
+                severity=Severity.LOW,
+                title=f"{len(self.js_endpoints)} API endpoint(s) discovered in client JavaScript",
+                endpoint=self.base_url,
+                description=("Static analysis of the site's JavaScript revealed API endpoints "
+                             "the client calls. These often aren't in the OpenAPI spec — shadow/"
+                             "undocumented surface (OWASP API9). Enumerate and test each for "
+                             f"auth and object-level access. Sample: {sample}."),
+                detail={"endpoints": self.js_endpoints, "count": len(self.js_endpoints),
+                        "source": "recon.jsanalysis"},
+                confidence="firm", verdict="true_positive", exploitability="conditional"))
         return out
 
 
@@ -219,7 +236,7 @@ class ReconEngine:
     def run(self, base_url: str, *, domain: Optional[str] = None,
             do_subdomains: bool = True, do_content: bool = True,
             resolve_subs: bool = True, do_platform: bool = True,
-            do_edge: bool = True) -> ReconProfile:
+            do_edge: bool = True, do_js: bool = True, max_scripts: int = 8) -> ReconProfile:
         profile = ReconProfile(base_url=base_url)
         profile.techs = self.web_fingerprint(base_url)
         if do_content:
@@ -230,7 +247,36 @@ class ReconEngine:
             self._detect_platform(profile)
         if do_edge:
             self._detect_edge(profile)
+        if do_js:
+            self._discover_js_endpoints(profile, max_scripts=max_scripts)
         return profile
+
+    def _discover_js_endpoints(self, profile: ReconProfile, *, max_scripts: int = 8) -> None:
+        """Statically extract API endpoints from the home page's inline JS and its
+        linked bundles (AJAX-spider payoff without a browser). Fail-soft."""
+        try:
+            from .jsanalysis import extract_endpoints
+            from urllib.parse import urljoin
+            status, headers, body = self.fetch(profile.base_url)
+            body = body or ""
+            found: dict = {}
+            for e in extract_endpoints(body, source="inline"):
+                found[(e.method, e.path)] = e
+            # follow same-origin <script src> bundles (bounded)
+            srcs = [s for s in _SRC_RE.findall(body) if s.endswith(".js") or ".js?" in s]
+            for src in srcs[:max_scripts]:
+                url = urljoin(profile.base_url, src)
+                try:
+                    st, _, js = self.fetch(url)
+                except Exception:
+                    continue
+                for e in extract_endpoints(js or "", source=src):
+                    found.setdefault((e.method, e.path), e)
+            profile.js_endpoints = [
+                {"path": e.path, "method": e.method, "kind": e.kind, "evidence": e.evidence}
+                for e in found.values()]
+        except Exception:
+            pass
 
     def _detect_edge(self, profile: ReconProfile) -> None:
         """Fold PASSIVE WAF/CDN/proxy detection (header-only, no attack probe) into
