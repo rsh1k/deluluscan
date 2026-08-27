@@ -19,7 +19,7 @@ import FindingDrawer from '@/components/FindingDrawer';
 import { Empty } from '@/components/ui';
 // Inlined so the Deluluscan logo renders in the self-contained single-file dashboard
 // (an external /logo-dark.svg cannot load when the HTML is opened standalone).
-import brandLogo from '/logo-dark.svg?raw';
+import brandLogo from '@/logo-dark.svg?raw';
 
 type Tab = 'findings' | 'access' | 'telemetry' | 'report' | 'attestation';
 const BASE_TABS: [Tab, string][] = [
