@@ -10,6 +10,9 @@ New here? Issues labelled [`good first issue`](https://github.com/rsh1k/delulusc
 and [`help wanted`](https://github.com/rsh1k/deluluscan/labels/help%20wanted) are
 a great place to start.
 
+By participating, you're expected to uphold our
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Ground rules (non-negotiable)
 
 Deluluscan is a **defensive / authorized-testing** tool. Every contribution must
