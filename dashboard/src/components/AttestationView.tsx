@@ -22,7 +22,7 @@ import { statusOf } from '@/lib/triage';
 import { Markdown } from '@/lib/markdown';
 import { hasAnyEdit, type ReportEdits } from '@/lib/report-edits';
 import { emptyAttestation, loadAttestationEdits, saveAttestationEdits } from '@/lib/attestation-edits';
-import brandLogo from '/logo-dark.svg?raw';
+import brandLogo from '@/logo-dark.svg?raw';
 
 function clone(e: ReportEdits): ReportEdits {
   return { cover: { ...e.cover }, sections: { ...e.sections }, custom: e.custom.map((c) => ({ ...c })) };

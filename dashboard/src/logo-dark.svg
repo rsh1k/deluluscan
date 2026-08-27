@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" role="img" aria-label="Deluluscan">
+  <defs>
+    <linearGradient id="dl_g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#dl_g)" stroke-width="4">
+    <path d="M32 6 L54 16 V32 C54 46 44 55 32 60 C20 55 10 46 10 32 V16 Z"/>
+  </g>
+  <circle cx="32" cy="30" r="8" fill="none" stroke="url(#dl_g)" stroke-width="4"/>
+  <line x1="38" y1="36" x2="46" y2="44" stroke="url(#dl_g)" stroke-width="4" stroke-linecap="round"/>
+  <text x="72" y="41" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="700" fill="currentColor">deluluscan</text>
+</svg>
