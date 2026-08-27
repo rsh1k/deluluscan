@@ -50,6 +50,9 @@ class ReconProfile:
     subdomains: list = field(default_factory=list)     # list[{name, live}]
     paths: list = field(default_factory=list)          # list[{path, status, size}]
     exposures: list = field(default_factory=list)      # list[{path, status, note}]
+    platform: Optional[dict] = None                    # detected platform intelligence
+    platform_findings: list = field(default_factory=list)  # list[Finding]
+    edges: list = field(default_factory=list)          # detected WAF/CDN/proxy (passive)
 
     def to_dict(self) -> dict:
         return {
@@ -59,6 +62,8 @@ class ReconProfile:
             "subdomains": self.subdomains,
             "paths": self.paths,
             "exposures": self.exposures,
+            "platform": self.platform,
+            "edges": self.edges,
         }
 
     def to_findings(self) -> list[Finding]:
@@ -91,6 +96,8 @@ class ReconProfile:
                 confidence="firm",
                 verdict="true_positive" if sensitive else "likely_true_positive",
                 exploitability="conditional"))
+        # 3) platform-intelligence findings (user enum, version, exposed surfaces)
+        out.extend(self.platform_findings)
         return out
 
 
@@ -211,11 +218,49 @@ class ReconEngine:
     # -- run everything -----------------------------------------------------
     def run(self, base_url: str, *, domain: Optional[str] = None,
             do_subdomains: bool = True, do_content: bool = True,
-            resolve_subs: bool = True) -> ReconProfile:
+            resolve_subs: bool = True, do_platform: bool = True,
+            do_edge: bool = True) -> ReconProfile:
         profile = ReconProfile(base_url=base_url)
         profile.techs = self.web_fingerprint(base_url)
         if do_content:
             profile.paths, profile.exposures = self.content_discovery(base_url)
         if do_subdomains and domain:
             profile.subdomains = self.enumerate_subdomains(domain, resolve=resolve_subs)
+        if do_platform:
+            self._detect_platform(profile)
+        if do_edge:
+            self._detect_edge(profile)
         return profile
+
+    def _detect_edge(self, profile: ReconProfile) -> None:
+        """Fold PASSIVE WAF/CDN/proxy detection (header-only, no attack probe) into
+        the recon profile. The active block-probe + port scan stay in the netscan
+        CLI. Fail-soft."""
+        try:
+            from ..netscan.waf import WafScan
+            edges = WafScan(fetch=self.fetch).detect(profile.base_url, active=False)
+            profile.edges = [{"name": e.name, "kind": e.kind, "confidence": e.confidence,
+                              "signals": e.signals} for e in edges]
+        except Exception:
+            pass
+
+    def _detect_platform(self, profile: ReconProfile) -> None:
+        """Fold platform intelligence into the recon profile. Fail-soft: any
+        error leaves the recon result unchanged (black-box, as before)."""
+        try:
+            from ..platforms import PlatformScan
+            scan = PlatformScan(fetch=self.fetch)
+            det, findings = scan.run(profile.base_url)
+            if det is not None:
+                p = det.profile
+                profile.platform = {
+                    "name": p.name, "category": p.category,
+                    "score": det.score, "confidence": det.confidence,
+                    "matched": det.matched, "api_base": p.api_base,
+                    "api_style": p.api_style, "auth_methods": list(p.auth_methods),
+                    "users_endpoint": p.users_endpoint,
+                    "sensitive_paths": list(p.sensitive_paths),
+                    "relevant_classes": list(p.relevant_classes)}
+                profile.platform_findings = findings
+        except Exception:
+            pass
