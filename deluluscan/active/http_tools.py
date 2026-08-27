@@ -9,7 +9,7 @@ every send is bound to the same authorized-target safety gate as the scanners).
   Postman request or a Burp Repeater tab).
 - ``Repeater``     — send / resend-with-edits.
 - ``Intruder``     — mark payload positions and iterate payload sets over them
-  (sniper / battering-ram / pitchfork), then flag responses that deviate from a
+  (sniper / battering-ram / pitchfork / cluster-bomb), then flag responses that deviate from a
   baseline. This is how the tool "changes parameters and tries".
 - ``Collection``   — save/load/replay an ordered set of requests.
 
@@ -151,7 +151,7 @@ def set_at(spec: RequestSpec, pos: Position, value: Any) -> RequestSpec:
 
 class Intruder:
     """Iterate payloads over marked positions (sniper / battering-ram /
-    pitchfork), then flag responses that deviate from the unmodified baseline."""
+    pitchfork / cluster-bomb), then flag responses that deviate from the baseline."""
 
     def __init__(self, client):
         self.repeater = Repeater(client)
@@ -186,6 +186,18 @@ class Intruder:
         elif attack_type == "pitchfork":
             # payloads is a list of lists, one per position
             for combo in zip(*payloads):
+                if len(results) >= max_requests:
+                    return results
+                spec = base
+                for pos, pl in zip(positions, combo):
+                    spec = set_at(spec, pos, pl)
+                run(spec, list(combo), [p.key for p in positions])
+        elif attack_type == "cluster_bomb":
+            # every combination of payloads across positions (Cartesian product) —
+            # payloads is a list of lists, one per position. Grows fast, so the
+            # max_requests budget is the real guard here.
+            import itertools
+            for combo in itertools.product(*payloads):
                 if len(results) >= max_requests:
                     return results
                 spec = base

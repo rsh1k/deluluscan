@@ -211,6 +211,28 @@ def test_intruder_flags_deviation():
           any(r.payload == "42" for r in hits), str([(r.payload, r.reason) for r in out]))
 
 
+def test_intruder_cluster_bomb():
+    # cluster-bomb = Cartesian product of payload sets across positions.
+    sent = []
+    class C:
+        def request(self, method, path, *, identity_label="anonymous", headers=None,
+                    params=None, **kw):
+            sent.append(dict(params or {}))
+            return rec(200, "ok", method=method, url=path)
+    intr = Intruder(C())
+    base = RequestSpec("GET", "http://h/api", params={"a": "0", "b": "0"})
+    out = intr.attack(base, [Position("param", "a"), Position("param", "b")],
+                      [["a1", "a2"], ["b1", "b2", "b3"]], attack_type="cluster_bomb")
+    # 2 x 3 = 6 combinations (baseline send excluded from results)
+    combos = {(r.payload[0], r.payload[1]) for r in out}
+    check("cluster-bomb produces full cartesian product", len(combos) == 6, combos)
+    check("cluster-bomb covers a corner combo", ("a2", "b3") in combos, combos)
+    check("cluster-bomb respects max_requests",
+          len(intr.attack(base, [Position("param", "a"), Position("param", "b")],
+                          [["a1", "a2"], ["b1", "b2", "b3"]],
+                          attack_type="cluster_bomb", max_requests=2)) == 2)
+
+
 if __name__ == "__main__":
     for fn in list(globals().values()):
         if callable(fn) and getattr(fn, "__name__", "").startswith("test_"):
