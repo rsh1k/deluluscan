@@ -157,6 +157,36 @@ def test_elasticsearch_open():
     check("es version", any("version disclosure" in f.title for f in findings))
 
 
+def test_cve_version_gating():
+    from deluluscan.platforms.cves import version_in_range, match_cves, CVE_CORPUS
+    check("range lower/upper", version_in_range("8.2.0", ">=8.0.0,<8.3.1"))
+    check("range excludes upper bound", not version_in_range("8.3.1", ">=8.0.0,<8.3.1"))
+    check("range excludes below", not version_in_range("7.9.0", ">=8.0.0,<8.3.1"))
+    check("star matches any", version_in_range("1.2.3", "*"))
+    check("padded compare 2.4 vs 2.4.2", version_in_range("2.4", "<2.4.2"))
+    check("no version -> no match", match_cves("Jenkins", "") == [])
+    check("jenkins old -> CVE", any(r.cve == "CVE-2024-23897" for r in match_cves("Jenkins", "2.426.1")))
+    check("jenkins fixed -> none", match_cves("Jenkins", "2.500") == [])
+    check("corpus all-fields", all(r.cve and r.affected and r.summary for r in CVE_CORPUS))
+    sevs = {"info", "low", "medium", "high", "critical"}
+    check("corpus severities valid", all(r.severity in sevs for r in CVE_CORPUS))
+
+
+def test_cve_finding_grading():
+    # A version-gated CVE must be firm but exploitability=unknown (version-inferred).
+    routes = {"/": (200, {"x-jenkins": "2.426.1"}, "Jenkins ver. 2.426.1")}
+    scan = PlatformScan(fetch=make_fetch(routes))
+    det, findings = scan.run("http://t")
+    cves = [f for f in findings if f.detail.get("cve")]
+    check("cve finding emitted", len(cves) >= 1, [f.title for f in findings])
+    f = cves[0]
+    check("cve is supply_chain", f.vuln_class == VulnClass.SUPPLY_CHAIN)
+    check("cve firm confidence", f.confidence == "firm")
+    check("cve exploitability unknown (inferred)", f.exploitability == "unknown", f.exploitability)
+    check("cve basis flagged version_inference", f.detail.get("basis") == "version_inference")
+    check("cve carries fixed_in", bool(f.detail.get("fixed_in")))
+
+
 def test_control_surface_protected():
     # A 401/403 on an exposed_check is an INFO "present but protected", not a hit.
     routes = {
@@ -178,6 +208,8 @@ if __name__ == "__main__":
     test_spring_boot_actuator()
     test_jenkins_script_console()
     test_elasticsearch_open()
+    test_cve_version_gating()
+    test_cve_finding_grading()
     test_control_surface_protected()
     test_profiles_wellformed()
     print(f"\n{_PASS} passed, {_FAIL} failed")
