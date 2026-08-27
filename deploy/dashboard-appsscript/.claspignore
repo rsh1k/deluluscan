@@ -1,0 +1,7 @@
+# Only these files belong in the Apps Script project.
+**/**
+!Code.gs
+!Gate.html
+!Logo.html
+!appsscript.json
+!Index.html

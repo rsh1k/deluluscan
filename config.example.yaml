@@ -1,0 +1,134 @@
+# deluluscan configuration — authorized testing of YOUR OWN the target instance.
+# Copy to config.yaml and fill in credentials.
+
+base_url: "http://localhost:8080"     # default dev HTTP port
+openapi_path: "/api/openapi.json"     # the spec behind the admin "API Playground"
+openapi_file: ""                      # OR: path to openapi.json saved from your
+                                      # logged-in browser (most reliable on 26.x).
+                                      # Get it at /api/openapi.json while signed into admin.
+verify_tls: true                      # set false only for self-signed local TLS
+
+# SAFETY GATE: the tool refuses non-loopback / non-RFC1918 targets unless this
+# is true. Only set it if you have written authorization for the target.
+allow_remote: false
+
+output_dir: "./deluluscan-out"
+
+# The three trust levels you asked to compare. Anonymous is implicit.
+# Provide EITHER username+password (the tool logs in via
+# POST /api/v1/authentication) OR a bearer_token (a target API access token).
+identities:
+  admin:
+    username: "admin@example.com"
+    password: "admin"
+    # bearer_token: "eyJhbGciOi..."   # alternative to user/pass
+  backend:
+    username: "editor@example.com"     # a limited back-end user you created
+    password: "Test12345!"
+
+ai:
+  # Pluggable AI backend (advisory only — the live differential verifier stays
+  # authoritative; the AI never fires destructive calls). Pick ONE provider:
+  #   none          disable AI entirely
+  #   anthropic     Anthropic Messages API            (env ANTHROPIC_API_KEY)
+  #   openai        OpenAI /chat/completions          (env OPENAI_API_KEY)
+  #   deepseek      DeepSeek (OpenAI-compatible)       (env DEEPSEEK_API_KEY)
+  #   openai_compat any OpenAI-compatible endpoint     (set endpoint + api_key_env)
+  #                 -- vLLM, LM Studio, OpenRouter, Together, local gateways
+  #   ollama        a LOCAL Ollama server              (offline, no key, no egress)
+  #   claude_code   your local `claude` CLI            (no key; your own session)
+  #   codex         your local `codex` CLI             (no key; your own session)
+  #   bedrock       Claude via AWS Bedrock Converse    (boto3 credential chain)
+  provider: "claude_code"
+  model: "claude-opus-4-8"    # provider's model id (Anthropic/OpenAI/DeepSeek/Ollama/Bedrock)
+  # OpenAI-compatible only: base URL + the NAME of the env var holding the key
+  # (a key is NEVER stored here). Empty -> the provider's own defaults.
+  endpoint: ""                # e.g. "http://localhost:8000/v1" for a local gateway
+  api_key_env: ""             # e.g. "OPENAI_API_KEY" / "DEEPSEEK_API_KEY"
+  ollama_host: "http://localhost:11434"
+  ollama_model: "llama3.1"
+  claude_code_path: "claude"
+  codex_path: "codex"
+  temperature: 0.0
+  timeout_s: 90
+  max_tokens: 1024
+  redact_prompts: true      # strip secrets (JWTs/keys/passwords) from prompts before egress
+  advisory_only: true       # AI only reads + advises; never fires destructive calls
+
+scan:
+  enable_browser: true      # headless-browser XSS execution confirmation (auto-noop if Playwright absent)
+                            # install: pip install playwright && playwright install chromium
+
+integrations:
+  # Out-of-band collaborator for blind SSRF / command injection / XXE confirmation.
+  #   install:  go install github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest
+  #   (binary lands in ~/go/bin — make sure it's on PATH)
+  enable_interactsh: true
+  interactsh_client_path: "interactsh-client"
+  interactsh_server: ""     # blank = public server; run your own for real engagements
+
+  # sqlmap as the SQLi confirmation oracle (host-allowlisted, batch, no --dump).
+  #   install:  sudo apt install sqlmap   (or: pipx install sqlmap)
+  enable_sqlmap: true
+  sqlmap_path: "sqlmap"
+
+  # nuclei template sweep (community + custom templates).
+  #   install:  go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+  enable_nuclei: true
+  nuclei_path: "nuclei"
+
+scan:
+  rate_limit_rps: 5.0       # be polite to a live app
+  timeout_s: 15.0
+  max_endpoints: 0          # 0 = no cap
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+  allow_state_changing: false   # opt-in; enables writes to the configured
+                                # identity's OWN resources (mass-assignment probe)
+                                # and the bounded race-condition prober
+  # Full arsenal. Omit this key entirely to get the same default set.
+  # Scanners to run. LEAVE THIS COMMENTED to run the full, current set (the
+  # default in code, kept up to date). Only set an explicit list to *restrict*
+  # the run — and know that omitting one disables it (e.g. dropping "privesc"
+  # disables the low-priv->admin->RCE BFLA detection).
+  # scanners: ["idor", "xss", "sqli", "ssrf", "owasp", "advisories",
+  #            "bopla", "bodyfuzz", "jwt", "authmatrix", "bopla_miner",
+  #            "sequencer", "faults", "flows", "graphql", "content_discovery",
+  #            "paramminer", "verbtamper", "race", "graphql_adv", "passive",
+  #            "injection", "fileupload", "cors", "csrf", "privesc",
+  #            "access_bypass", "known_cve", "cache", "logic", "authflow",
+  #            "oauth", "idor_iter"]
+  sqli_sleep_s: 7
+  flow_burst: 12            # bounded burst for the rate-limit probe (hard cap 20)
+  race_parallel: 8          # bounded parallelism for the race prober (hard cap 20)
+
+# Optional: RSA public key (PEM) to enable the JWT RS256->HS256 confusion test.
+# jwt_public_key: |
+#   -----BEGIN PUBLIC KEY-----
+#   ...
+#   -----END PUBLIC KEY-----
+
+# --- Source-informed scanning (optional) -----------------------------------
+# Read the open the target source to find dangerous code patterns (unsanitized
+# orderby -> SQLi, missing authorization on state-changing methods -> BFLA,
+# Velocity eval -> SSTI/RCE, deserialization) and auto-generate targeted live
+# probes for exactly those endpoints. The source tells the scanner WHERE and
+# WHAT to test; the live check confirms whether it is real on your instance.
+source_scan:
+  enabled: false
+  # Path to a local the target source clone (PREFERRED — fast, offline, complete).
+  # If empty, a curated set of REST resource files is fetched from GitHub raw.
+  source_root: ""          # e.g. /home/you/src/target-core
+  # Optional AI review pass over source candidates to drop false leads.
+  ai_review: false
+  max_files: 60
+
+# --- Fuzzing / anomaly detection (optional, OFF by default) ----------------
+# Mutates endpoint inputs with malformed/boundary/oversized values and flags
+# responses that DEVIATE from each endpoint's learned baseline (a new 5xx, a raw
+# stack trace, a latency spike, an evaluated expression, a crash). This is how
+# researchers find *unknown* bugs — it surfaces CANDIDATE LEADS for a human to
+# investigate. It does NOT and cannot "detect zero-days" automatically; every
+# lead is rated tentative/unverified and must be manually reproduced.
+fuzz:
+  enabled: false
+  max_endpoints: 40

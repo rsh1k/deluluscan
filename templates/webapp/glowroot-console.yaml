@@ -1,0 +1,23 @@
+id: target-glowroot-console
+info:
+  name: Glowroot profiler console reachable
+  severity: high
+  vuln_class: memory_disclosure
+  description: >
+    The Glowroot APM console is exposed. It discloses live traces, SQL text and
+    JVM internals, and the docker-compose default enables it
+    (GLOWROOT_WEB_UI_ENABLED=true) with a comment warning against production use.
+  remediation: Set GLOWROOT_WEB_UI_ENABLED=false outside local development.
+  tags: [target, exposure, apm]
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}:4000/"
+      - "{{BaseURL}}/glowroot/"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["glowroot", "Glowroot"]
+        condition: or

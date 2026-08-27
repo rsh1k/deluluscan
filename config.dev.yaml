@@ -1,0 +1,80 @@
+# Config for auditing a target dev instance (docker-compose or up-target.sh).
+# Target is loopback -> inherently in authorization scope.
+# Do not point this at anything you are not authorized to test.
+#
+# Stand up: ./up-compose.sh           (docker-compose, provisions test users)
+#    or:    ./up-target.sh [TAG]             (all-in-one dev image, no provisioning)
+# Tear down: docker compose down             (or: docker rm -f target-audit)
+base_url: http://127.0.0.1:8080
+verify_tls: false          # dev image uses a self-signed cert
+allow_remote: false        # loopback only; keep this false
+
+identities:
+  anonymous: {}
+  admin:
+    # Which admin principal the target accepts is BUILD-DEPENDENT: the numeric userId
+    # was the only one that worked after the company-ID migration, but on current
+    # target/target:latest it is the reverse ('appuser' -> 401,
+    # 'admin@example.com' -> 200). provision_users.py probes both and rewrites this
+    # line to whichever one authenticated, so leave it to that rather than
+    # hand-editing — AuthManager does not fall back, and a wrong value here makes
+    # every "admin baseline" differential silently degrade to anonymous.
+    username: admin@example.com
+    password: admin
+  # The identities below are created by up-compose.sh → scripts/provision_users.py,
+  # each with a DISTINCT role so differential authz testing is meaningful:
+  #   frontend_user  Front-end User only (no back-end/API — should be denied the admin API)
+  #   backend        Back-end User (baseline console/API, no content workflow grants)
+  #   readonly       Back-end User + Anyone who can View Content (view, not edit/publish)
+  #   content_editor Back-end User + Anyone who can Edit Content
+  #   publisher      Back-end User + Edit + Publish Content
+  #   api_user       Back-end User (baseline; exercised via API-token auth)
+  frontend_user:
+    username: frontend@example.com
+    password: Frontend123!
+  backend:
+    username: backend@example.com
+    password: Backend123!
+  readonly:
+    username: readonly@example.com
+    password: ReadOnly123!
+  content_editor:
+    username: editor@example.com
+    password: Editor123!
+  publisher:
+    username: publisher@example.com
+    password: Publisher123!
+  api_user:
+    username: apiuser@example.com
+    password: ApiUser123!
+
+scan:
+  rate_limit_rps: 20        # your own box; go faster than you would remotely
+
+  # Destructive operations (shutdown, bulk delete, reindex, DB dump) are IN SCOPE
+  # on a disposable local instance — their authorization is worth testing too.
+  # They are held out of the main sweep and probed in a dedicated pass afterwards,
+  # because sending one at endpoint 50 of 740 would cost us the other 690.
+  # `enabled` unset = follow allow_state_changing (so --allow-state-changing
+  # covers the full surface here).
+  destructive:
+    restart_command: "docker compose restart target"
+    health_path: /api/v1/appconfiguration
+    wait_timeout_s: 240
+
+# Grey-box observability: tap the target container's OWN logs + memory/CPU during
+# the scan and correlate them with each probe. Confirms SQLi/SSTI from the server's
+# stack trace, catches secrets written to logs, flags state-changing operations
+# that leave no audit trail, and spots heap growth / OOM. Local-only (same
+# authorization boundary as every probe) and fail-soft (no Docker -> black-box run).
+# Container names match up-compose.sh's project (deluluscan-<service>-1).
+# Enable per-run with --observe, or set enabled: true here.
+observe:
+  enabled: false
+  container: deluluscan-target-1
+  db_container: deluluscan-db-1     # optional: also tail Postgres for DB-side errors
+  stats_interval_s: 2.0
+
+fuzz:
+  enabled: true
+  max_endpoints: 200

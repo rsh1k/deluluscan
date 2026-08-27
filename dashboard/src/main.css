@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   LIGHT THEME
+   ---------------------------------------------------------------------------
+   The report UI was authored dark-first: ~350 utilities across 19 components
+   spell the surface as slate/gray-950..800 and the ink as slate/gray-100..400.
+   Rather than rewrite every one of those class names (a large, error-prone diff
+   that would also drift the moment a component is added), the two NEUTRAL ramps
+   are inverted here at their source. `bg-slate-950` keeps meaning "the page
+   surface" and `text-slate-300` keeps meaning "body ink" — each simply resolves
+   to its light-mode counterpart now.
+
+   Only the neutrals are inverted. Hues carrying meaning (severity, identity,
+   verdict) are NOT flipped — an inverted red is not a lighter red — so those are
+   re-stepped for a light surface in src/lib/model.ts instead.
+   --------------------------------------------------------------------------- */
+@theme {
+  /* slate, inverted: 50<->950, 100<->900, ... 500 is its own midpoint */
+  --color-slate-50:  #020617;
+  --color-slate-100: #0f172a;
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+  --color-slate-400: #475569;
+  --color-slate-500: #64748b;
+  --color-slate-600: #94a3b8;
+  --color-slate-700: #cbd5e1;
+  --color-slate-800: #e2e8f0;
+  --color-slate-900: #f1f5f9;
+  --color-slate-950: #f8fafc;
+
+  /* gray, inverted the same way (the mirrored security/* components use gray) */
+  --color-gray-50:  #030712;
+  --color-gray-100: #111827;
+  --color-gray-200: #1f2937;
+  --color-gray-300: #374151;
+  --color-gray-400: #4b5563;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #9ca3af;
+  --color-gray-700: #d1d5db;
+  --color-gray-800: #e5e7eb;
+  --color-gray-900: #f3f4f6;
+  --color-gray-950: #f9fafb;
+}
+
+/* The bundled Deluluscan mark is authored for a dark header — its letterforms are
+   fill="white", which is invisible on the light surface. Recolour them to the
+   darkest ink; the magenta dot is left exactly as the brand specifies it. */
+.rk-logo svg [fill="white"],
+.rk-logo svg [fill="#fff"],
+.rk-logo svg [fill="#ffffff"],
+.rk-logo svg [fill="#FFF"],
+.rk-logo svg [fill="#FFFFFF"] { fill: #0f172a; }
+
+/* The dark build leaned on pure white for emphasis text sitting on a dark
+   surface; on a light surface that is invisible. Emphasis is now the darkest
+   ink. (Kept as a narrow override so the component classes stay untouched.) */
+.text-white { color: #0f172a; }
+/* ...except where white sits on a saturated, still-dark chip/button fill. */
+.bg-indigo-500 .text-white, .bg-indigo-600 .text-white,
+button.bg-indigo-600, button.bg-indigo-600 * { color: #ffffff; }
+
+/* Rendered Markdown for user-edited report sections (dangerouslySetInnerHTML,
+   so styled by class rather than Tailwind utilities). Matches the light report. */
+.rk-md { font-size: 13px; line-height: 1.6; color: #334155; }
+.rk-md .rk-md-p { margin: 0 0 0.75rem; }
+.rk-md .rk-md-h { margin: 1rem 0 0.5rem; font-weight: 600; color: #0f172a; font-size: 13px; }
+.rk-md .rk-md-ul, .rk-md .rk-md-ol { margin: 0 0 0.75rem 1.25rem; }
+.rk-md .rk-md-ul { list-style: disc; }
+.rk-md .rk-md-ol { list-style: decimal; }
+.rk-md .rk-md-ul li, .rk-md .rk-md-ol li { margin: 0.25rem 0; }
+.rk-md .rk-md-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em; background: #e2e8f0; color: #0f172a; padding: 0.05rem 0.3rem; border-radius: 4px; }
+.rk-md .rk-md-pre { margin: 0 0 0.75rem; padding: 0.75rem; overflow-x: auto;
+  background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; }
+.rk-md .rk-md-pre code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px; color: #334155; }
+.rk-md .rk-md-a { color: #4338ca; text-decoration: underline; }
+.rk-md .rk-md-quote { margin: 0 0 0.75rem; padding: 0.4rem 0.75rem; border-left: 3px solid #cbd5e1;
+  background: rgba(148,163,184,.15); color: #334155; }
+.rk-md .rk-md-hr { border: 0; border-top: 1px solid #e2e8f0; margin: 1rem 0; }
+.rk-md .rk-md-table { width: 100%; border-collapse: collapse; margin: 0 0 0.75rem; font-size: 12.5px; }
+.rk-md .rk-md-table th { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #cbd5e1;
+  color: #475569; font-weight: 600; }
+.rk-md .rk-md-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(203,213,225,.7); }
+
+/* Print: drop editor chrome so the PDF is the clean document. */
+@media print {
+  /* Drop the app chrome (nav bar, tabs, Export/Print buttons, edit controls) so
+     the PDF is just the report. */
+  .rd-print-hide { display: none !important; }
+  /* The report is light-themed, so printing needs no dark canvas — a white
+     page is now the faithful rendering. Exact colour printing is still forced so
+     severity chips and rules survive the browser's background stripping. */
+  html, body, #root { background: #ffffff !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  main { max-width: 100% !important; padding: 0.25in !important; }
+}

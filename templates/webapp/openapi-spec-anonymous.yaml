@@ -1,0 +1,26 @@
+id: target-openapi-spec-anonymous
+info:
+  name: OpenAPI specification served to unauthenticated callers
+  severity: low
+  vuln_class: inventory
+  description: >
+    The complete API specification is returned without authentication,
+    enumerating every path and schema. Confirmed present on 1.2.5, where
+    the anonymous response is byte-identical to the administrator's.
+  remediation: >
+    Decide deliberately whether the specification should be public; if not,
+    gate /api/openapi.json behind authentication.
+  tags: [target, inventory, disclosure]
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/openapi.json"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["\"openapi\"", "\"paths\""]
+        condition: and
+      - type: dsl
+        dsl: ["len(body) > 10000"]

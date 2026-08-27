@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deluluscan"
+dynamic = ["version"]
+description = "AI-augmented, evidence-first security auditor for authorized testing of web, API, application, container, cloud and LLM/AI-system targets."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{ name = "Rashik Adhikari" }]
+keywords = [
+  "security", "penetration-testing", "pentest", "vulnerability-scanner",
+  "appsec", "api-security", "owasp", "llm-security", "ai-security",
+  "dast", "sast", "cspm", "red-team", "agentic-ai",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: Developers",
+  "Topic :: Security",
+  "Topic :: Software Development :: Testing",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: POSIX :: Linux",
+]
+dependencies = [
+  "requests>=2.31",
+  "PyYAML>=6.0",
+  "cryptography>=42.0",
+]
+
+[project.optional-dependencies]
+bedrock = ["boto3>=1.34"]
+web = ["fastapi>=0.110", "uvicorn>=0.27"]
+xlsx = ["openpyxl>=3.1"]
+all = ["boto3>=1.34", "fastapi>=0.110", "uvicorn>=0.27", "openpyxl>=3.1"]
+
+[project.scripts]
+deluluscan = "deluluscan.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/rsh1k/deluluscan"
+Source = "https://github.com/rsh1k/deluluscan"
+Issues = "https://github.com/rsh1k/deluluscan/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "deluluscan.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["deluluscan*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+deluluscan = ["assets/*", "assets/**/*", "data/*", "data/**/*"]

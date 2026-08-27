@@ -1,0 +1,57 @@
+# deluluscan config for the unattended nightly CI scan
+# (.github/workflows/nightly-scan.yml, runs entirely in this repo).
+#
+# Target is the ephemeral target instance the workflow stands up itself via
+# docker-compose (loopback only — inherently in authorization scope; never
+# point this at anything else). Do not hand-edit base_url/identities below —
+# provision_users.py rewrites them to match whatever the compose stack assigns,
+# the same way it already does for config.dev.yaml.
+base_url: http://127.0.0.1:8080
+verify_tls: false
+allow_remote: false
+
+identities:
+  anonymous: {}
+  admin:
+    # Build-dependent; provision_users.py probes both principals and rewrites this
+    # to whichever authenticated. See config.dev.yaml for why it matters.
+    username: admin@example.com
+    password: admin
+  backend:
+    username: backend@example.com
+    password: Backend123!
+  content_editor:
+    username: editor@example.com
+    password: Editor123!
+  readonly:
+    username: readonly@example.com
+    password: ReadOnly123!
+  api_user:
+    username: apiuser@example.com
+    password: ApiUser123!
+
+# Claude via AWS Bedrock (deluluscan/ai/analyst.py's _bedrock() — boto3's Converse
+# API). Credentials come from whatever's already in the environment: in CI,
+# the orchestrator's executor job already ran `configure-aws-credentials`
+# (OIDC role assumption) before Claude's Bash tool runs ci_runner.py as a
+# subprocess, so those temporary AWS credentials are already exported into
+# this process's environment — nothing else to configure here. `model` is
+# the cross-region inference profile confirmed working across the target's other
+# Bedrock migrations (the target source, the target/platform, etc.) — keep this in sync
+# with the org's BEDROCK_MODEL_ID variable if that value ever changes.
+ai:
+  provider: bedrock
+  model: us.anthropic.claude-sonnet-4-6-20250514-v1:0
+  bedrock_region: us-east-1
+  max_tokens: 1024
+  advisory_only: true
+
+scan:
+  rate_limit_rps: 20
+  allow_state_changing: true
+
+fuzz:
+  enabled: true
+  max_endpoints: 200
+
+output_dir: ./deluluscan-out

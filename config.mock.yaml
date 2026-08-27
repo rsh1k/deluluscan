@@ -1,0 +1,15 @@
+base_url: "http://127.0.0.1:8093"
+verify_tls: false
+output_dir: "./deluluscan-out"
+identities:
+  admin:
+    username: "admin-user"
+    password: "pw"
+  backend:
+    username: "editor"
+    password: "pw"
+ai:
+  provider: "none"
+scan:
+  rate_limit_rps: 200.0
+  allow_state_changing: true

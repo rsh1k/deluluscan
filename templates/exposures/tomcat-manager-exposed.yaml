@@ -1,0 +1,28 @@
+id: tomcat-manager-exposed
+info:
+  name: Tomcat manager application reachable
+  severity: high
+  vuln_class: misconfig
+  description: >
+    The Tomcat manager or host-manager application answers. Reaching the login
+    prompt is not by itself a compromise, but the application should not be
+    deployed on an internet-facing CMS node.
+  remediation: Undeploy the manager applications, or restrict them by network policy.
+  tags: [tomcat, exposure]
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/manager/html"
+      - "{{BaseURL}}/host-manager/html"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200, 401]
+      - type: word
+        words: ["Tomcat", "manager"]
+        condition: or
+      # A target SPA index page returns 200 for almost any path; requiring a
+      # Tomcat marker keeps the soft-404 catch-all from firing this template.
+      - type: word
+        words: ["<!doctype html><html lang=\"en\"><head><title>target"]
+        negative: true

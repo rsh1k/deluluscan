@@ -1,0 +1,13 @@
+requests>=2.31
+PyYAML>=6.0
+# AES-GCM encryption for password-protected dashboards (python -m deluluscan.dashboard --password)
+cryptography>=42.0
+# Web UI (optional but included):
+fastapi>=0.110
+uvicorn>=0.27
+# ai.provider: bedrock (Claude via AWS Bedrock's Converse API)
+boto3>=1.34
+# Optional third-party tools are external binaries on PATH, not pip packages:
+#   sqlmap            https://sqlmap.org
+#   nuclei            https://github.com/projectdiscovery/nuclei
+#   interactsh-client https://github.com/projectdiscovery/interactsh
