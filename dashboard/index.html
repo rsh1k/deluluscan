@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- The report is republished in place at a stable URL, so a cached copy shows
+         STALE FINDINGS - including ones since retracted or re-rated. Never let a
+         browser or CDN hold this page. -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Deluluscan &mdash; the target Security Assessment</title>
+    <!-- Scan payload injection point. deluluscan/dashboard.py replaces the marker below
+         with either `var SCANS=[...]` (plaintext) or `var SCANS=null; var __ENC__={...}`
+         (AES-GCM, decrypted in-browser after the passphrase prompt). It must stay a
+         plain inline script so the built single-file bundle keeps the same contract
+         the Python generator and `--rekey` already depend on. -->
+    <script>
+      var SCANS = null;
+      var __ENC__ = null;
+      /*__DATA__*/
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

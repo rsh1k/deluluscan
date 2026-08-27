@@ -1,0 +1,12 @@
+# A dedicated namespace for the Deluluscan dashboard — deliberately separate from any
+# other tenant (e.g. dotusage). This deployment touches nothing outside it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: deluluscan
+  labels:
+    target.cloud/provider: aws
+    target.cloud/scope: corp
+    target.cloud/tenant: deluluscan
+    target.cloud/project: security-dashboard
+    target.cloud/environment: prod

@@ -1,0 +1,179 @@
+{
+  "meta": {
+    "technique": "analogical transfer \u2014 peer-product CVE corpus distilled into search patterns",
+    "corpus": "NVD: liferay, magnolia cms, alfresco, opencms (178 advisories, 12 mistake classes)",
+    "target": "the target (Java, JAX-RS)",
+    "generated": "2026-08-08",
+    "caveat": "Search heuristics, NOT findings. Every hit needs the live verify chain."
+  },
+  "patterns": [
+    {
+      "id": "xxe_unsafe_xml_parser",
+      "vuln_class": "injection",
+      "severity": "high",
+      "description": "An XML parser factory is created without disabling DOCTYPE/external entities. Peer CMSes were repeatedly hit here \u2014 OpenCms parsed a manifest.xml out of an uploaded .zip (CVE-2026-38429) and exposed an unauthenticated XXE on a CMIS query servlet (CVE-2023-42344). the target application may parse XML from uploads/imports, the same shape.",
+      "regex": "(DocumentBuilderFactory|SAXParserFactory|XMLInputFactory|TransformerFactory|SchemaFactory)\\s*\\.\\s*newInstance\\s*\\(|new\\s+(SAXReader|SAXBuilder)\\s*\\(|DocumentHelper\\s*\\.\\s*(parseText|parse)\\s*\\(|XMLReaderFactory\\s*\\.\\s*createXMLReader\\s*\\(",
+      "guard": "disallow-doctype-decl|FEATURE_SECURE_PROCESSING|external-general-entities|external-parameter-entities|setExpandEntityReferences\\s*\\(\\s*false|SUPPORT_DTD|IS_SUPPORTING_EXTERNAL_ENTITIES",
+      "probe_kind": "xxe",
+      "probe_params": [
+        "file",
+        "xml",
+        "bundle",
+        "manifest"
+      ],
+      "path_hint": [
+        "/rest/",
+        "Resource.java",
+        "Import",
+        "Bundle",
+        "Publish",
+        "Xml",
+        "XML"
+      ],
+      "check_downstream": false,
+      "provenance": [
+        "CVE-2026-38429",
+        "CVE-2023-42344",
+        "CVE-2023-42346",
+        "CVE-2021-3312"
+      ]
+    },
+    {
+      "id": "unsafe_deserialization_config",
+      "vuln_class": "supply_chain",
+      "severity": "critical",
+      "description": "A deserializer is configured to instantiate attacker-named types: SnakeYAML without SafeConstructor, or Jackson polymorphic typing without a validator. This is the exact class that gave Magnolia RCE via its YAML parser (CVE-2021-46364) and Liferay RCE via JSONWS (CVE-2020-7961).",
+      "regex": "new\\s+Yaml\\s*\\(\\s*\\)|enableDefaultTyping|activateDefaultTyping|@JsonTypeInfo\\s*\\(\\s*use\\s*=\\s*(JsonTypeInfo\\.)?Id\\.CLASS|readValue\\s*\\([^)]*Object\\.class",
+      "guard": "SafeConstructor|PolymorphicTypeValidator|BasicPolymorphicTypeValidator|LaissezFaireSubTypeValidator|allowIfBaseType|validateSubType",
+      "probe_kind": "deserialize",
+      "probe_params": [
+        "body",
+        "data",
+        "yaml",
+        "json"
+      ],
+      "path_hint": [
+        "/rest/",
+        "Resource.java",
+        "API.java",
+        "Util.java",
+        "Publish",
+        "Bundle"
+      ],
+      "check_downstream": false,
+      "provenance": [
+        "CVE-2021-46364",
+        "CVE-2020-7961",
+        "CVE-2019-16891",
+        "CVE-2019-14224"
+      ]
+    },
+    {
+      "id": "read_without_permission_check",
+      "vuln_class": "authz",
+      "severity": "medium",
+      "description": "A REST read admits an unauthenticated caller (rejectWhenNoUser=false) and then resolves the object with no PermissionAPI check. Liferay's most repeated CVE class is precisely 'module X does not properly check user permissions' on a read (CVE-2021-29052/33324/33327/33333/33334). Check the target application's field/content read APIs for the same pattern.",
+      "regex": "init\\s*\\([^)]*,\\s*false\\s*,",
+      "guard": "checkPermission|doesUserHavePermission|doesUserHaveRole|permissionAPI|PermissionAPI|isCMSAdmin|requiredPortlet",
+      "probe_kind": "authz",
+      "probe_params": [],
+      "path_hint": [
+        "/rest/",
+        "Resource.java"
+      ],
+      "check_downstream": false,
+      "provenance": [
+        "CVE-2021-29052",
+        "CVE-2021-33324",
+        "CVE-2021-33327",
+        "CVE-2021-33333"
+      ]
+    },
+    {
+      "id": "path_traversal_file_param",
+      "vuln_class": "injection",
+      "severity": "high",
+      "description": "A request-derived name is used to build a filesystem path with no normalization or root check. OpenCms leaked arbitrary files through a 'fil' parameter on downloadTrigger.jsp (CVE-2006-3934) and multiple LFI endpoints (CVE-2019-13237); Liferay via an encoded ..%2E%2E in minifierBundleDir (CVE-2016-6517).",
+      "regex": "new\\s+File\\s*\\([^)]*\\b(path|file|fileName|filename|uri|dir|folder)\\b|Paths\\s*\\.\\s*get\\s*\\([^)]*\\b(path|file|fileName|uri)\\b|new\\s+FileInputStream\\s*\\([^)]*\\b(path|file|name)\\b",
+      "guard": "isValidFilePath|getCanonicalPath|\\.normalize\\s*\\(|FilenameUtils\\s*\\.\\s*(normalize|getName)|startsWith\\s*\\(|isRelativeTo",
+      "probe_kind": "traversal",
+      "probe_params": [
+        "file",
+        "fileName",
+        "path",
+        "name",
+        "uri"
+      ],
+      "path_hint": [
+        "/rest/",
+        "Resource.java",
+        "Servlet.java"
+      ],
+      "check_downstream": false,
+      "provenance": [
+        "CVE-2016-6517",
+        "CVE-2006-3934",
+        "CVE-2019-13237",
+        "CVE-2008-1301"
+      ]
+    },
+    {
+      "id": "script_engine_rce",
+      "vuln_class": "injection",
+      "severity": "critical",
+      "description": "A scripting engine or process launcher is reachable from request handling. Liferay shipped exactly this and it became RCE three times \u2014 the Groovy script console (CVE-2019-11444, CVE-2020-28884) and the Gogo shell (CVE-2020-28885). if the target application ships a scripting/template engine, the question is only what gates it.",
+      "regex": "GroovyShell|ScriptEngineManager|getEngineByName\\s*\\(|Runtime\\s*\\.\\s*getRuntime\\s*\\(\\s*\\)\\s*\\.\\s*exec|new\\s+ProcessBuilder\\s*\\(|GroovyClassLoader",
+      "guard": "isCMSAdmin|CMS_ADMINISTRATOR|requiredPortlet|requiredRoles|Scripting\\s*Developer|loadCMSAdminRole|doesUserHaveRole",
+      "probe_kind": "rce",
+      "probe_params": [
+        "script",
+        "code",
+        "body",
+        "expression"
+      ],
+      "path_hint": [
+        "/rest/",
+        "Resource.java",
+        "rendering",
+        "script",
+        "template-engine",
+        "js"
+      ],
+      "check_downstream": false,
+      "provenance": [
+        "CVE-2019-11444",
+        "CVE-2020-28884",
+        "CVE-2020-28885"
+      ]
+    },
+    {
+      "id": "unvalidated_redirect",
+      "vuln_class": "misconfig",
+      "severity": "medium",
+      "description": "A request-controlled value is used as a redirect target without an allowlist check. Liferay needed a dedicated HtmlUtil.escapeRedirect and still had it bypassed (CVE-2022-28977); Magnolia's login redirect was chained with CSRF to brute-force accounts (CVE-2021-46366).",
+      "regex": "sendRedirect\\s*\\([^)]*\\b(url|redirect|referer|referrer|returnUrl|next|target|destination)\\b|Response\\s*\\.\\s*(temporaryRedirect|seeOther)\\s*\\(",
+      "guard": "escapeRedirect|isValidRedirect|allowlist|whitelist|isInternalUrl|startsWith\\s*\\(\\s*\\\"/\\\"",
+      "probe_kind": "redirect",
+      "probe_params": [
+        "url",
+        "redirect",
+        "returnUrl",
+        "next"
+      ],
+      "path_hint": [
+        "/rest/",
+        "Resource.java",
+        "Servlet.java",
+        "login",
+        "Login"
+      ],
+      "check_downstream": false,
+      "provenance": [
+        "CVE-2022-28977",
+        "CVE-2021-33331",
+        "CVE-2021-46366",
+        "CVE-2019-14223"
+      ]
+    }
+  ]
+}

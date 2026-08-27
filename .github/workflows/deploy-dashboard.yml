@@ -1,0 +1,89 @@
+name: Deploy dashboard (SSO)
+
+# Rebuilds the Deluluscan dashboard image and pushes it to ECR, then rolls the EKS
+# deployment behind Google SSO (see deploy/dashboard/). Mirrors dotusage's
+# AWS-OIDC -> ECR flow, but uses Deluluscan's OWN IAM role — never dotusage's.
+#
+# Left as workflow_dispatch + workflow_call (no schedule) so it CANNOT fire until
+# the platform team provisions the role and sets the repo vars below — matching
+# the deliberately-disabled nightly-scan. Once configured, the nightly scan can
+# `uses:` this to refresh the SSO dashboard after each run, or run it manually.
+#
+# Required repo vars (Settings -> Secrets and variables -> Actions -> Variables),
+# all provisioned by the platform team for THIS repo (a deluluscan-github-actions role
+# trusting the target/deluluscan, an ECR repo, and EKS access):
+#   AWS_DEPLOY_ROLE_ARN  e.g. arn:aws:iam::<acct>:role/deluluscan-github-actions
+#   ECR_DASHBOARD_REPO   e.g. <acct>.dkr.ecr.us-east-1.amazonaws.com/deluluscan/dashboard
+#   EKS_CLUSTER_NAME     the corp cluster name (for aws eks update-kubeconfig)
+#   AWS_REGION           optional; defaults to us-east-1
+
+on:
+  workflow_dispatch:
+    inputs:
+      results_path:
+        description: "Path to the scan results.json to render"
+        default: "deluluscan-out/results.json"
+        required: false
+  workflow_call:
+    inputs:
+      results_path:
+        type: string
+        default: "deluluscan-out/results.json"
+        required: false
+
+concurrency:
+  group: deploy-dashboard
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    # No-op until the platform team wires the deploy role, so an unconfigured repo
+    # never runs a doomed job.
+    if: ${{ vars.AWS_DEPLOY_ROLE_ARN != '' }}
+    permissions:
+      id-token: write        # OIDC -> AWS STS
+      contents: read
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      RESULTS: ${{ inputs.results_path || 'deluluscan-out/results.json' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Deluluscan deps
+        run: pip install -r requirements.txt
+
+      - name: Generate the dashboard (plaintext — SSO is the boundary)
+        run: |
+          test -f "$RESULTS" || { echo "results not found: $RESULTS"; exit 1; }
+          python3 -m deluluscan.dashboard "$RESULTS" deploy/dashboard/dashboard.html
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4.1.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: deploy/dashboard
+          file: deploy/dashboard/Dockerfile
+          push: true
+          tags: |
+            ${{ vars.ECR_DASHBOARD_REPO }}:latest
+            ${{ vars.ECR_DASHBOARD_REPO }}:${{ github.sha }}
+
+      - name: Roll the EKS deployment
+        run: |
+          aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "$AWS_REGION"
+          kubectl -n deluluscan set image deployment/deluluscan-dashboard \
+            dashboard="${{ vars.ECR_DASHBOARD_REPO }}:${{ github.sha }}"
+          kubectl -n deluluscan rollout status deployment/deluluscan-dashboard --timeout=120s

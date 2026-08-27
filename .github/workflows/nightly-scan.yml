@@ -1,0 +1,126 @@
+name: Nightly the target scan
+
+# SUPERSEDED (2026-07-13): manager's revised plan is to run Deluluscan locally
+# via Claude Code and push only docs/dashboard.html to this repo — no CI,
+# no Bedrock orchestrator, no cross-repo publish to target-aios (that publish
+# step was backtracked; the target repo owner didn't want it there).
+# Cron trigger is disabled below; workflow_dispatch is left so this can still
+# be run manually if the CI approach is revisited. Everything past this point
+# describes the old design and is kept only as reference.
+#
+# Runs entirely in THIS repo (not called as a reusable workflow from
+# elsewhere) — a nested reusable-workflow call always checks out whatever
+# repo the overall run originated from, so if this were called from
+# target-aios, Claude would end up in a checkout of target-aios with no
+# access to deluluscan's own scanner code. Hosting the schedule here instead means
+# the run originates in this repo, so the ai-workflows executor's checkout
+# correctly resolves to the target/deluluscan.
+#
+# `scan` calls the target/ai-workflows' shared Claude-via-Bedrock orchestrator —
+# the same OIDC-authenticated path target/core already uses for PR review.
+# That role's trust policy only mints credentials from *inside* ai-workflows'
+# own executor chain, so this job cannot assume the Bedrock role directly
+# itself; going through the orchestrator is the only way to reach it.
+#
+# The prompt is a fixed, deterministic command sequence, not a review/judgment
+# task — Claude is scoped (via --allowedTools) to exactly those commands plus
+# committing the output to a branch in THIS repo, using the default
+# GITHUB_TOKEN (no cross-repo credentials granted to the Claude session at
+# all). `publish` is a separate, plain, non-agentic job that does the actual
+# cross-repo push to target-aios, using a token secret scoped to that purpose.
+
+on:
+  # schedule trigger disabled — see SUPERSEDED note above
+  # - cron: "0 7 * * *" # 07:00 UTC nightly
+  workflow_dispatch: {}
+
+concurrency:
+  group: nightly-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    permissions:
+      contents: write # Claude's own git push targets only this repo's scan-data branch
+      id-token: write # OIDC -> AWS STS, performed inside the orchestrator's executor
+    uses: the target/ai-workflows/.github/workflows/claude-orchestrator.yml@v3.0.0
+    with:
+      trigger_mode: automatic
+      model_id: ${{ vars.BEDROCK_MODEL_ID }}
+      bedrock_role_arn: ${{ vars.BEDROCK_ROLE_ARN }}
+      aws_region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      use_sticky_comment: false # no PR/issue to comment on for a scheduled run
+      claude_args: >-
+        --allowedTools "Bash(export CONFIG=*),Bash(pip install *),Bash(./up-compose.sh),Bash(python3 -m deluluscan.cli *),Bash(python3 ci_runner.py *),Bash(docker compose *),Bash(git checkout -B scan-data),Bash(git config user.name *),Bash(git config user.email *),Bash(git add ci-out),Bash(git commit -m *),Bash(git push origin scan-data)"
+      prompt: |
+        Run exactly this fixed operational sequence, in order, in the repo
+        root. This is NOT a code review or a judgment call about the scan
+        results — do not analyze findings, do not deviate, do not add or skip
+        steps. Report each command's raw output.
+
+        1. pip install -r requirements.txt
+        2. export CONFIG=config.ci.yaml
+        3. ./up-compose.sh
+        4. python3 -m deluluscan.cli --config config.ci.yaml --openapi-file openapi.json --allow-state-changing --fuzz
+        5. python3 ci_runner.py --results deluluscan-out/results.json --config config.ci.yaml --out-dir ci-out/data
+        6. docker compose down -v
+        7. git checkout -B scan-data
+        8. git config user.name "deluluscan-bot"
+        9. git config user.email "deluluscan-bot@users.noreply.github.com"
+        10. git add ci-out
+        11. git commit -m "scan: $(date -u +%F)"
+        12. git push origin scan-data
+
+        If any step fails, stop and report the failure — do not attempt to
+        work around it or improvise a fix.
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  publish:
+    needs: scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout scan-data branch
+        uses: actions/checkout@v4
+        with:
+          ref: scan-data
+          path: deluluscan-scan-data
+
+      - name: Checkout target-aios
+        uses: actions/checkout@v4
+        with:
+          repository: the target/target-aios
+          token: ${{ secrets.TARGET_AIOS_PUSH_TOKEN }}
+          path: target-aios
+
+      - name: Publish results to target-aios's security-data branch
+        working-directory: target-aios
+        env:
+          GIT_AUTHOR_NAME: deluluscan-bot
+          GIT_AUTHOR_EMAIL: deluluscan-bot@users.noreply.github.com
+          GIT_COMMITTER_NAME: deluluscan-bot
+          GIT_COMMITTER_EMAIL: deluluscan-bot@users.noreply.github.com
+        run: |
+          set -euo pipefail
+          git fetch origin security-data 2>/dev/null || true
+          if git show-ref --verify --quiet refs/remotes/origin/security-data; then
+            git checkout -B security-data origin/security-data
+          else
+            git checkout --orphan security-data
+            git rm -rf . > /dev/null 2>&1 || true
+          fi
+          # Merge, don't replace: the security-data branch accumulates dated
+          # scans/*.json history and holds triage-state.json (owned by the
+          # frontend triage API, never present in this job's own output) —
+          # only today's new dated file and latest.json get added/overwritten.
+          mkdir -p security/data
+          cp -r ../deluluscan-scan-data/ci-out/data/. security/data/
+          git add security/data
+          if git diff --cached --quiet; then
+            echo "no changes to publish"
+          else
+            git commit -m "nightly scan: $(date -u +%F)"
+            git push origin security-data
+          fi

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <meta charset="utf-8" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+
+      body {
+        margin: 0; min-height: 100vh; display: flex; align-items: center;
+        justify-content: center; padding: 1.5rem;
+        background:
+          radial-gradient(60rem 40rem at 50% -10%, rgba(99,102,241,.16), transparent 60%),
+          radial-gradient(40rem 30rem at 90% 110%, rgba(139,92,246,.10), transparent 60%),
+          #020617;
+        color: #e2e8f0;
+        font: 14px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .card {
+        width: 100%; max-width: 27rem; padding: 2.25rem 2rem 1.75rem;
+        border: 1px solid #1e293b; border-radius: 16px;
+        background: linear-gradient(180deg, rgba(30,41,59,.55), rgba(15,23,42,.9));
+        box-shadow: 0 20px 60px -20px rgba(0,0,0,.9), 0 0 0 1px rgba(148,163,184,.04);
+      }
+
+      /* ---- brand ---- */
+      .brand { display: flex; align-items: center; gap: .625rem; margin-bottom: 1.75rem; }
+      .brand svg { height: 18px; width: auto; display: block; }
+      .brand .sep { width: 1px; height: 16px; background: #334155; }
+      .brand .app { font-size: 13px; font-weight: 700; color: #f1f5f9; letter-spacing: -.01em; }
+      .brand .tag { font-size: 10px; color: #64748b; letter-spacing: .1em; text-transform: uppercase; }
+
+      h1 { font-size: 19px; font-weight: 700; margin: 0 0 .375rem; color: #f8fafc; letter-spacing: -.02em; }
+      .lede { margin: 0 0 1.5rem; font-size: 13px; color: #94a3b8; }
+
+      /* ---- who you are (the anti-phishing signal) ---- */
+      .who {
+        display: flex; align-items: center; gap: .75rem; padding: .75rem;
+        border: 1px solid #1e293b; border-radius: 10px; background: rgba(2,6,23,.5);
+        margin-bottom: 1.5rem;
+      }
+      .avatar {
+        flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%;
+        display: grid; place-items: center; font-weight: 700; font-size: 15px; color: #fff;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      }
+      .who-text { min-width: 0; }
+      .who-name { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+      .who-mail {
+        font-size: 12px; color: #94a3b8; white-space: nowrap;
+        overflow: hidden; text-overflow: ellipsis;
+      }
+      .who-badge {
+        display: flex; align-items: center; gap: .3rem; margin-top: .15rem;
+        font-size: 10.5px; color: #64748b;
+      }
+      .who-badge svg { width: 11px; height: 11px; display: block; }
+
+      /* ---- steps ---- */
+      .steps { display: flex; align-items: center; gap: .5rem; margin-bottom: 1rem; font-size: 11px; }
+      .step { display: flex; align-items: center; gap: .375rem; color: #475569; }
+      .step.done { color: #34d399; }
+      .step.now { color: #a5b4fc; }
+      .dot {
+        width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center;
+        font-size: 9px; font-weight: 700; border: 1px solid currentColor;
+      }
+      .step.done .dot { background: rgba(52,211,153,.15); }
+      .step.now .dot { background: rgba(165,180,252,.15); }
+      .steps .bar { flex: 1; height: 1px; background: #1e293b; }
+
+      /* ---- controls ---- */
+      button {
+        width: 100%; padding: .7rem 1rem; border: 0; border-radius: 10px;
+        background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff;
+        font-size: 13.5px; font-weight: 600; cursor: pointer; transition: filter .15s, opacity .15s;
+        display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+      }
+      button:hover:not(:disabled) { filter: brightness(1.12); }
+      button:disabled { opacity: .5; cursor: default; }
+      button.link {
+        background: none; color: #818cf8; font-weight: 500; font-size: 12px;
+        padding: .5rem; margin-top: .25rem;
+      }
+      button.link:hover:not(:disabled) { filter: none; text-decoration: underline; }
+
+      .spinner {
+        width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.35);
+        border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      /* ---- otp boxes ---- */
+      .otp { display: flex; gap: .5rem; justify-content: space-between; margin: .25rem 0 1rem; }
+      .otp input {
+        width: 100%; aspect-ratio: 1 / 1; min-width: 0; padding: 0; text-align: center;
+        border-radius: 10px; border: 1px solid #334155; background: #020617; color: #f1f5f9;
+        font: 700 20px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        transition: border-color .15s, box-shadow .15s;
+      }
+      .otp input:focus {
+        outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.22);
+      }
+      .otp input.filled { border-color: #4f46e5; }
+      .otp.bad input { border-color: #fb7185; animation: shake .3s; }
+      @keyframes shake {
+        25% { transform: translateX(-4px); } 75% { transform: translateX(4px); }
+      }
+
+      .meta { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; }
+      .meta .ttl { color: #64748b; font-variant-numeric: tabular-nums; }
+
+      #msg { margin: .875rem 0 0; font-size: 12px; min-height: 1.15em; text-align: center; }
+      #msg.err { color: #fda4af; }
+      #msg.ok { color: #6ee7b7; }
+
+      .foot {
+        margin: 1.5rem 0 0; padding-top: 1rem; border-top: 1px solid #1e293b;
+        font-size: 10.5px; color: #475569; text-align: center; line-height: 1.7;
+      }
+      .foot a { color: #64748b; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="brand">
+        <?!= include('Logo') ?>
+        <span class="sep"></span>
+        <span class="app">Deluluscan</span>
+        <span class="tag">Security</span>
+      </div>
+
+      <h1>Verify it&rsquo;s you</h1>
+      <p class="lede">
+        This security report is restricted to named reviewers. One quick check and you&rsquo;re in.
+      </p>
+
+      <div class="who">
+        <div class="avatar"><?= initial ?></div>
+        <div class="who-text">
+          <div class="who-name"><?= displayName ?></div>
+          <div class="who-mail"><?= userEmail ?></div>
+          <div class="who-badge">
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#4285F4" d="M45 24c0-1.6-.1-2.7-.4-3.9H24v7.1h12c-.2 1.8-1.5 4.6-4.4 6.5l6.7 5.2C42.2 35.3 45 30.1 45 24z"/>
+              <path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.3l-6.9-5.4c-1.9 1.3-4.4 2.2-7.6 2.2-5.8 0-10.7-3.8-12.5-9.1l-7.1 5.5C8.1 41.1 15.5 46 24 46z"/>
+              <path fill="#FBBC05" d="M11.5 28.4c-.5-1.4-.7-2.9-.7-4.4s.3-3 .7-4.4l-7.1-5.5C2.9 17 2 20.4 2 24s.9 7 2.4 9.9l7.1-5.5z"/>
+              <path fill="#EA4335" d="M24 10.6c4.1 0 6.9 1.8 8.5 3.3l6.2-6C34.9 4.500 29.9 2 24 2 15.5 2 8.1 6.9 4.4 14.1l7.1 5.5C13.3 14.4 18.2 10.6 24 10.6z"/>
+            </svg>
+            Signed in with Google
+          </div>
+        </div>
+      </div>
+
+      <div class="steps">
+        <span class="step done"><span class="dot">&#10003;</span> Signed in</span>
+        <span class="bar"></span>
+        <span class="step now" id="s2"><span class="dot">2</span> Email code</span>
+      </div>
+
+      <!-- step 1 -->
+      <div id="step1">
+        <button id="send" type="button">
+          <span id="sendLabel">Send me a verification code</span>
+        </button>
+      </div>
+
+      <!-- step 2 -->
+      <div id="step2" hidden>
+        <div class="otp" id="otp">
+          <input type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="Digit 1" />
+          <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 2" />
+          <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 3" />
+          <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 4" />
+          <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 5" />
+          <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 6" />
+        </div>
+        <div class="meta">
+          <span class="ttl" id="ttl"></span>
+          <button class="link" id="resend" type="button" style="width:auto;margin:0">Send a new code</button>
+        </div>
+        <button id="verify" type="button" style="margin-top:.75rem">Open the report</button>
+      </div>
+
+      <p id="msg"></p>
+
+      <p class="foot">
+        Access is limited to approved reviewers and every attempt is logged.<br />
+        Not expecting this? Contact <a href="mailto:security@example.com">security@example.com</a>.
+      </p>
+    </main>
+
+    <script>
+      var TTL = Number('<?= ttlSeconds ?>') || 600;
+      var $ = function (id) { return document.getElementById(id); };
+      var boxes = Array.prototype.slice.call($('otp').getElementsByTagName('input'));
+      var timer = null;
+
+      function msg(text, kind) { var m = $('msg'); m.textContent = text || ''; m.className = kind || ''; }
+      function lock(on) {
+        $('send').disabled = on; $('verify').disabled = on; $('resend').disabled = on;
+      }
+      function spin(btn, label, on) {
+        btn.innerHTML = on
+          ? '<span class="spinner"></span>' + label
+          : label;
+      }
+      function fail(err) {
+        lock(false);
+        spin($('send'), 'Send me a verification code', false);
+        spin($('verify'), 'Open the report', false);
+        $('otp').className = 'otp bad';
+        setTimeout(function () { $('otp').className = 'otp'; }, 350);
+        msg((err && err.message) || 'Something went wrong. Please try again.', 'err');
+      }
+      function code() { return boxes.map(function (b) { return b.value; }).join(''); }
+
+      function countdown() {
+        var left = TTL;
+        clearInterval(timer);
+        timer = setInterval(function () {
+          left -= 1;
+          if (left <= 0) {
+            clearInterval(timer);
+            $('ttl').textContent = 'Code expired';
+            return;
+          }
+          var m = Math.floor(left / 60), s = left % 60;
+          $('ttl').textContent = 'Expires in ' + m + ':' + (s < 10 ? '0' : '') + s;
+        }, 1000);
+      }
+
+      function requestCode() {
+        lock(true);
+        spin($('send'), 'Sending…', true);
+        msg('');
+        google.script.run
+          .withSuccessHandler(function (addr) {
+            lock(false);
+            spin($('send'), 'Send me a verification code', false);
+            $('step1').hidden = true;
+            $('step2').hidden = false;
+            $('s2').innerHTML = '<span class="dot">2</span> Enter code';
+            msg('We emailed a 6-digit code to ' + addr, 'ok');
+            countdown();
+            boxes[0].focus();
+          })
+          .withFailureHandler(fail)
+          .requestOtp();
+      }
+
+      function verify() {
+        var c = code();
+        if (!/^[0-9]{6}$/.test(c)) { msg('Enter all six digits.', 'err'); return; }
+        lock(true);
+        spin($('verify'), 'Verifying…', true);
+        msg('');
+        google.script.run
+          .withSuccessHandler(function () {
+            clearInterval(timer);
+            msg('Verified — opening your report…', 'ok');
+            spin($('verify'), 'Opening…', true);
+            // Swap this page for the dashboard in place: the Apps Script iframe is
+            // sandboxed without allow-top-navigation, so a top-level reload is not
+            // available to us.
+            google.script.run
+              .withSuccessHandler(function (html) {
+                document.open(); document.write(html); document.close();
+              })
+              .withFailureHandler(fail)
+              .getDashboardHtml();
+          })
+          .withFailureHandler(function (err) {
+            boxes.forEach(function (b) { b.value = ''; b.className = ''; });
+            boxes[0].focus();
+            fail(err);
+          })
+          .submitOtp(c);
+      }
+
+      boxes.forEach(function (box, i) {
+        box.addEventListener('input', function () {
+          box.value = box.value.replace(/[^0-9]/g, '').slice(0, 1);
+          box.className = box.value ? 'filled' : '';
+          if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
+          if (code().length === 6) verify();          // auto-submit when complete
+        });
+        box.addEventListener('keydown', function (e) {
+          if (e.key === 'Backspace' && !box.value && i > 0) boxes[i - 1].focus();
+          if (e.key === 'Enter') verify();
+        });
+        box.addEventListener('paste', function (e) {
+          var text = (e.clipboardData || window.clipboardData).getData('text') || '';
+          var digits = text.replace(/[^0-9]/g, '').slice(0, 6);
+          if (!digits) return;
+          e.preventDefault();
+          digits.split('').forEach(function (d, n) {
+            if (boxes[n]) { boxes[n].value = d; boxes[n].className = 'filled'; }
+          });
+          boxes[Math.min(digits.length, 5)].focus();
+          if (digits.length === 6) verify();
+        });
+      });
+
+      $('send').addEventListener('click', requestCode);
+      $('resend').addEventListener('click', function () {
+        boxes.forEach(function (b) { b.value = ''; b.className = ''; });
+        boxes[0].focus();
+        requestCode();
+      });
+      $('verify').addEventListener('click', verify);
+    </script>
+  </body>
+</html>

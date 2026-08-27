@@ -1,0 +1,4 @@
+include LICENSE README.md requirements.txt
+recursive-include deluluscan/assets *
+recursive-include deluluscan/data *
+global-exclude __pycache__ *.py[cod]
