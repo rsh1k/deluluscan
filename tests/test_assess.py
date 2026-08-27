@@ -87,6 +87,25 @@ def test_run_web_assessment_merges_modules_offline():
 
 
 
+def test_netscan_and_passive_merge_offline():
+    def netscan_fetch(url, method="GET", timeout=10):
+        return 200, {"server": "cloudflare", "cf-ray": "1-EWR"}, "<html>ok</html>"
+    def netscan_connect(host, port, timeout=1.5):
+        return "-NOAUTH Authentication required.\r\n" if port == 6379 else None
+    def passive_fetch(url):
+        return 500, {"content-type": "text/html"}, \
+            "<b>Fatal error</b>: boom in /var/www/x.php on line <b>3</b>"
+    a = run_web_assessment(
+        "http://t/", modules=["netscan", "passive"], netscan_ports=True,
+        netscan_fetch=netscan_fetch, netscan_connect=netscan_connect,
+        passive_fetch=passive_fetch)
+    titles = [f.title for f in a.findings]
+    check("netscan edge (Cloudflare) merged", any("Cloudflare" in t for t in titles), titles)
+    check("netscan dangerous-port (Redis) merged", any("Redis" in t or "6379" in t for t in titles), titles)
+    check("passive PHP-error merged", any("PHP error" in t for t in titles), titles)
+    check("netscan+passive recorded", {"netscan", "passive"} <= set(a.modules_run), a.modules_run)
+
+
 def test_assess_includes_sast_and_apispec():
     import tempfile, json as _json
     d = tempfile.mkdtemp()

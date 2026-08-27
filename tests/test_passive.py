@@ -90,6 +90,38 @@ def test_clean_response_no_findings():
     check("clean response -> no findings", f == [], [fi.title for fi in f])
 
 
+def test_orchestrator_passive_scanner_body_rules():
+    # The in-scan PassiveScanner must apply the shared body rules over collected
+    # responses (ZAP parity) — a Java stack trace in a response body -> finding.
+    from deluluscan.scanners.passive import PassiveScanner
+    from deluluscan.models import Endpoint, RequestRecord, IdentityRole
+
+    class _Ident:
+        username = "anon"; bearer_token = None
+        def label(self): return "anonymous"
+
+    class _Auth:
+        def headers_for(self, ident): return {}
+
+    class _Client:
+        def request(self, method, path, **kw):
+            return RequestRecord(method=method, url="http://t" + path, identity="anon",
+                                 status=500, elapsed_ms=1.0,
+                                 resp_headers={"content-type": "text/html"},
+                                 resp_body="Exception in thread \"main\" java.lang.NullPointer"
+                                           "Exception\n\tat com.app.Foo(Foo.java:42)",
+                                 resp_len=90)
+
+    idents = {IdentityRole.ANON.value: _Ident()}
+    sc = PassiveScanner(_Client(), _Auth(), object(), idents)
+    ep = Endpoint(method="GET", path="/boom")
+    findings = list(sc.run(ep))
+    titles = [f.title for f in findings]
+    check("in-scan passive fires java stacktrace body rule",
+          any("Java stack trace" in t for t in titles), titles)
+    check("body-rule finding marked passive", any(f.detail.get("passive") for f in findings))
+
+
 def test_rules_wellformed():
     sevs = {"info", "low", "medium", "high", "critical"}
     for r in RULES:

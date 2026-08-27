@@ -30,7 +30,10 @@ def main(argv=None):
     p.add_argument("--graphql", help="GraphQL endpoint URL to include")
     p.add_argument("--sast-path", help="source tree/file to SAST-scan and include")
     p.add_argument("--spec", help="OpenAPI/Swagger spec file to security-lint and include")
-    p.add_argument("--modules", help="comma list: recon,headers,secrets,webapi (default: all applicable)")
+    p.add_argument("--modules", help="comma list: recon,headers,secrets,netscan,passive,webapi "
+                                     "(default: all applicable)")
+    p.add_argument("--netscan-ports", action="store_true",
+                   help="also run the netscan TCP port/service scan (opens sockets; loopback/RFC1918)")
     p.add_argument("--formats", default="md,html,json,sarif",
                    help="comma list: json,md,html,sarif,csv,xlsx,junit")
     p.add_argument("--out-dir", default="./deluluscan-report")
@@ -40,7 +43,8 @@ def main(argv=None):
         raise SystemExit(f"[scope] {a.url} is not loopback/RFC1918; use --allow-remote if authorized.")
     mods = [m.strip() for m in a.modules.split(",")] if a.modules else None
     assessment = run_web_assessment(a.url, domain=a.domain, graphql_url=a.graphql, modules=mods,
-                                    sast_path=a.sast_path, spec_path=a.spec)
+                                    sast_path=a.sast_path, spec_path=a.spec,
+                                    netscan_ports=a.netscan_ports)
     payload = assessment.payload()
     written = write_reports(payload, a.out_dir, [f for f in a.formats.split(",") if f.strip()])
     print(f"[assess] {a.url}: {payload['meta']['finding_count']} finding(s) "

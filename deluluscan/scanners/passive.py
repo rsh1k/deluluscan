@@ -122,6 +122,31 @@ class PassiveScanner(Scanner):
                     "Add Cache-Control: no-store to responses carrying user data.",
                     "no_cache_control")
 
+        # 7) response-BODY content rules (ZAP passive-scan parity): stack traces,
+        # SQL errors, exposed debug consoles, directory listing, internal-IP
+        # disclosure, HTML-comment leaks. Reuses the shared deluluscan.passive
+        # rule set so a full scan analyzes every collected body for free.
+        # Deduped once per scan per rule to stay low-noise.
+        yield from self._body_rules(endpoint, rec, seen)
+
+    def _body_rules(self, endpoint, rec, seen):
+        from ..passive.engine import _compiled, _target_text
+        from ..passive.rules import RULES
+        _sev = {"info": Severity.INFO, "low": Severity.LOW, "medium": Severity.MEDIUM,
+                "high": Severity.HIGH, "critical": Severity.CRITICAL}
+        headers = {str(k).lower(): str(v) for k, v in (rec.resp_headers or {}).items()}
+        for rule in RULES:
+            if rule.where == "url":
+                continue  # token-in-URL already covered by check (4) above
+            key = f"body:{rule.id}"
+            if key in seen:
+                continue
+            text = _target_text(rule, rec.url or "", headers, rec.resp_body or "")
+            if text and _compiled[rule.id].search(text):
+                seen.add(key)
+                yield self._passive(VulnClass(rule.vuln_class), _sev[rule.severity],
+                    rule.title, endpoint, rec, rule.note, rule.id)
+
     def _passive(self, vc, sev, title, endpoint, rec, desc, test):
         f = Finding(vuln_class=vc, severity=sev, title=title, endpoint=endpoint.key,
                     description=desc, evidence=[rec],
