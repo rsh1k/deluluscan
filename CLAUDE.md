@@ -192,6 +192,36 @@ via `--mantis-findings-dir` when the corpus exists.
   fingerprints + known-vulnerable-library rules + content wordlists), `engine.py`
   (ReconEngine → web fingerprint, crt.sh subdomains, content discovery → ReconProfile
   → Finding[]). CLI: `python3 -m deluluscan.recon`. `tests/test_recon.py`.
+  ReconEngine auto-folds platform intelligence (below) into `ReconProfile.platform`.
+- `deluluscan/platforms/` — platform intelligence (know what the target *is*):
+  `profiles.py` (data-driven `PlatformProfile`s — WordPress/Drupal/Joomla/Ghost +
+  AWS/GCP/Azure hosting — each carrying fingerprint `Signal`s, API base+style, auth
+  model, user-enum + version-disclosure surfaces, relevant vuln classes), `engine.py`
+  (`PlatformScan.identify` → best-scoring profile + confidence; `.assess` →
+  platform-specific findings: unauth user enumeration `/wp-json/wp/v2/users` &
+  `/jsonapi/user/user`, version disclosure `CHANGELOG.txt`/`joomla.xml`, exposed
+  `/xmlrpc.php` & `/administrator/`). Detection only; offline-testable via injected
+  `fetch`. CLI: `python3 -m deluluscan.platforms --url … [--json]`.
+  Docs: `docs/PLATFORM_INTELLIGENCE.md` (+ Nessus/Burp/ZAP capability map).
+  `tests/test_platforms.py`. Add a platform = append a profile (data, not code).
+  Ships 23 profiles (WordPress/Drupal/Joomla/Ghost, Laravel/Django/Rails/Express/
+  Spring-Boot/Tomcat, Magento/Shopify, Jenkins/GitLab/Grafana/Kibana/phpMyAdmin/
+  Atlassian, Elasticsearch/Kubernetes-API, AWS/GCP/Azure hosting). `exposed_checks`
+  on a profile = data-driven live probes of its high-risk surfaces (Spring
+  `/actuator/heapdump`, Jenkins `/script`, ES `/_cat/indices`, Laravel `/.env`).
+- `deluluscan/netscan/` — edge & network reconnaissance (WAF/CDN/proxy, ports,
+  honeypot, IDS/IPS): `signatures.py` (data-driven vendor DB — 18 WAF/CDN edges
+  incl. Cloudflare/Akamai/Fastly/Imperva/Sucuri/AWS/Azure via cf-ray/x-amz-cf-id/
+  x-iinfo/… + cookies + block-body; honeypot markers; port→service map;
+  dangerous-port list), `waf.py` (`WafScan`: wafw00f-style passive header pass +
+  active harmless block-probe; confidence scales with independent signals),
+  `ports.py` (`PortScan`: bounded TCP-connect + banner-grab + service fingerprint,
+  injectable `connect` for offline tests), `honeypot.py` (conservative *tentative*
+  leads — known deception banners + implausible multi-service spread), `engine.py`
+  (`NetScan`: composes all + IDS/IPS inference from a dropped malicious probe →
+  `NetProfile`/Findings). Detection only; active passes gated to loopback/RFC1918.
+  ReconEngine folds PASSIVE edge detection in automatically (`do_edge`, header-only).
+  CLI: `python3 -m deluluscan.netscan --url … [--no-ports] [--json]`. `tests/test_netscan.py`.
 - `deluluscan/agentic/` — exploitation-chain agent (WS-2): `capabilities.py`
   (allowlisted safe primitives via injected toolbox), `agent.py` (`ExploitChainAgent`:
   bounded observe->act->verify loop, step budget, state-changing opt-in + approval gate,

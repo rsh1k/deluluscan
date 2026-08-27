@@ -108,6 +108,38 @@ def test_profile_to_findings_mapping():
           git and git.verdict == "true_positive" and git.severity.value == "high", git and git.verdict)
 
 
+def test_platform_intelligence_folded_in():
+    # NOTE: this file's make_fetch matches by endswith, where the "/" route
+    # matches any URL — so list specific paths first; first match wins.
+    fetch = make_fetch({
+        "/wp-login.php": (200, {}, "Log In"),
+        "/wp-json/wp/v2/users": (200, {}, '[{"id":1,"name":"admin","slug":"admin"}]'),
+        "/wp-json/": (200, {}, '{"namespaces":["wp/v2"],"description":"WordPress 6.4 site"}'),
+        "/xmlrpc.php": (200, {}, "XML-RPC server accepts POST requests only."),
+        "/": (200, {"x-pingback": "http://t/xmlrpc.php"},
+              '<meta name="generator" content="WordPress 6.4"><link href="/wp-content/x.css">'),
+    })
+    prof = ReconEngine(fetch=fetch, crt_fetch=lambda d: [], resolve=lambda h: False).run(
+        "http://t/", do_subdomains=False, do_content=False)
+    check("recon detects platform", prof.platform and prof.platform["name"] == "WordPress",
+          prof.platform)
+    check("recon knows API base", prof.platform and prof.platform["api_base"] == "/wp-json")
+    titles = [f.title for f in prof.to_findings()]
+    check("recon folds platform user-enum finding",
+          any("user enumeration" in t for t in titles), titles)
+
+
+def test_edge_detection_folded_in():
+    fetch = make_fetch({
+        "/": (200, {"server": "cloudflare", "cf-ray": "8ab-EWR",
+                    "cf-cache-status": "DYNAMIC"}, "<html>ok</html>"),
+    })
+    prof = ReconEngine(fetch=fetch, crt_fetch=lambda d: [], resolve=lambda h: False).run(
+        "http://t/", do_subdomains=False, do_content=False, do_platform=False)
+    names = [e["name"] for e in prof.edges]
+    check("recon detects Cloudflare edge (passive)", "Cloudflare" in names, names)
+
+
 def test_cli_scope_gate():
     from deluluscan.recon.__main__ import main
     try:
