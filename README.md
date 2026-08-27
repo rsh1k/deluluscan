@@ -145,6 +145,7 @@ for the extension points, dev setup, and how to run the tests.
   the authorization boundary stays, and we *confirm to proof, never weaponize*.
 - Found a security issue **in Deluluscan itself**? Please report it privately — see
   **[SECURITY.md](SECURITY.md)**.
+- Participation is governed by our **[Code of Conduct](CODE_OF_CONDUCT.md)**.
 
 ## License
 
