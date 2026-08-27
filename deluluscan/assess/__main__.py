@@ -34,6 +34,8 @@ def main(argv=None):
                                      "(default: all applicable)")
     p.add_argument("--netscan-ports", action="store_true",
                    help="also run the netscan TCP port/service scan (opens sockets; loopback/RFC1918)")
+    p.add_argument("--crawl", action="store_true",
+                   help="run the dynamic headless-browser crawl (needs the optional playwright dep)")
     p.add_argument("--formats", default="md,html,json,sarif",
                    help="comma list: json,md,html,sarif,csv,xlsx,junit")
     p.add_argument("--out-dir", default="./deluluscan-report")
@@ -42,6 +44,11 @@ def main(argv=None):
     if not _is_local(a.url) and not a.allow_remote:
         raise SystemExit(f"[scope] {a.url} is not loopback/RFC1918; use --allow-remote if authorized.")
     mods = [m.strip() for m in a.modules.split(",")] if a.modules else None
+    if a.crawl and mods is None:
+        # default set + opt-in crawl
+        mods = ["recon", "headers", "secrets", "netscan", "passive"] + (["webapi"] if a.graphql else []) + ["crawl"]
+    elif a.crawl and "crawl" not in mods:
+        mods = mods + ["crawl"]
     assessment = run_web_assessment(a.url, domain=a.domain, graphql_url=a.graphql, modules=mods,
                                     sast_path=a.sast_path, spec_path=a.spec,
                                     netscan_ports=a.netscan_ports)

@@ -106,6 +106,28 @@ def test_netscan_and_passive_merge_offline():
     check("netscan+passive recorded", {"netscan", "passive"} <= set(a.modules_run), a.modules_run)
 
 
+def test_crawl_module_merges_with_injected_driver():
+    from deluluscan.crawler.browser import RenderedPage, NetworkRequest
+    class FakeDriver:
+        def render(self, url, timeout=15):
+            if url.rstrip("/") == "http://t":
+                return RenderedPage(url=url, status=200, links=[],
+                                    requests=[NetworkRequest("GET", "http://t/api/v1/profile", "xhr")])
+            return RenderedPage(url=url, status=404)
+        def close(self): pass
+    a = run_web_assessment("http://t/", modules=["crawl"], crawl_driver=FakeDriver())
+    check("crawl recorded", "crawl" in a.modules_run, a.modules_run)
+    check("dynamic API endpoint surfaced",
+          any("observed via dynamic crawl" in f.title for f in a.findings),
+          [f.title for f in a.findings])
+
+
+def test_crawl_module_failsoft_without_driver():
+    # No injected driver + Playwright may be absent/unusable at http://t -> fail-soft.
+    a = run_web_assessment("http://t/", modules=["crawl"])
+    check("crawl module recorded even on failure", "crawl" in a.modules_run, a.modules_run)
+
+
 def test_assess_includes_sast_and_apispec():
     import tempfile, json as _json
     d = tempfile.mkdtemp()

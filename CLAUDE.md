@@ -202,6 +202,17 @@ via `--mantis-findings-dir` when the corpus exists.
   without a headless browser; ReconEngine follows same-origin `<script>` bundles
   (`do_js`, bounded by `max_scripts`) → `ReconProfile.js_endpoints` + an INVENTORY
   finding. `tests/test_jsanalysis.py`.
+- `deluluscan/crawler/` — dynamic (headless-browser) crawler, the AJAX-spider that
+  recovers surface a static parse can't: `browser.py` (`BrowserDriver` protocol +
+  `PlaywrightDriver` — renders a URL, reports final HTML/links/forms and the
+  **network requests the page's JS actually made**; Playwright is an OPTIONAL dep,
+  lazily imported, absence raises an actionable hint), `engine.py` (`CrawlEngine`:
+  bounded same-origin BFS — `max_pages`/`max_depth`/timeout — capturing XHR/fetch
+  API endpoints + forms → `CrawlResult`/INVENTORY finding). Driver is injected, so
+  the engine is fully offline-testable with a fake driver. Detection only, scope-
+  gated. CLI: `python3 -m deluluscan.crawler --url …` (needs `pip install playwright
+  && playwright install chromium`; extra: `pip install deluluscan[crawler]`).
+  Opt-in assess module (`--crawl`, fail-soft). `tests/test_crawler.py`.
 - `deluluscan/platforms/` — platform intelligence (know what the target *is*):
   `profiles.py` (data-driven `PlatformProfile`s — WordPress/Drupal/Joomla/Ghost +
   AWS/GCP/Azure hosting — each carrying fingerprint `Signal`s, API base+style, auth

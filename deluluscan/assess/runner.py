@@ -75,13 +75,15 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
                        sast_path: Optional[str] = None,
                        spec_path: Optional[str] = None,
                        netscan_ports: bool = False,
+                       crawl_max_pages: int = 40,
                        recon_fetch: Optional[Callable] = None,
                        header_fetch: Optional[Callable] = None,
                        secret_fetch: Optional[Callable] = None,
                        gql_fetch: Optional[Callable] = None,
                        netscan_fetch: Optional[Callable] = None,
                        netscan_connect: Optional[Callable] = None,
-                       passive_fetch: Optional[Callable] = None) -> Assessment:
+                       passive_fetch: Optional[Callable] = None,
+                       crawl_driver=None) -> Assessment:
     """Live-run the web-facing modules and merge. recon auto-folds platform
     intelligence + version-gated CVEs + passive edge detection; netscan adds
     active WAF/CDN + honeypot + IDS/IPS (+ ports when netscan_ports=True); passive
@@ -129,6 +131,26 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
             a.add(PassiveScan().analyze(status, target, headers, body), "passive")
         else:
             a.modules_run.append("passive")
+
+    # dynamic crawl: OPT-IN (needs the optional Playwright dep). Fail-soft — if the
+    # driver can't start, the assessment records the module and moves on.
+    if "crawl" in mods:
+        from ..crawler.engine import CrawlEngine
+        driver = crawl_driver
+        try:
+            if driver is None:
+                from ..crawler.browser import PlaywrightDriver
+                driver = PlaywrightDriver()
+            res = CrawlEngine(driver, max_pages=crawl_max_pages).crawl(target)
+            a.add(res.to_findings(), "crawl")
+        except Exception:
+            a.modules_run.append("crawl")     # e.g. Playwright not installed
+        finally:
+            try:
+                if driver is not None:
+                    driver.close()
+            except Exception:
+                pass
 
     # source + contract (offline; run whenever a path is supplied, independent of `mods`)
     if sast_path:
