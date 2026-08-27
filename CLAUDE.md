@@ -228,6 +228,15 @@ via `--mantis-findings-dir` when the corpus exists.
   `NetProfile`/Findings). Detection only; active passes gated to loopback/RFC1918.
   ReconEngine folds PASSIVE edge detection in automatically (`do_edge`, header-only).
   CLI: `python3 -m deluluscan.netscan --url … [--no-ports] [--json]`. `tests/test_netscan.py`.
+- `deluluscan/passive/` — passive response analysis (ZAP passive-scan parity, no
+  extra requests): `rules.py` (14 high-precision `PassiveRule`s over body/header/url
+  — Java/Python/PHP/Ruby/.NET/Node stack traces + SQL errors (CWE-209), Werkzeug/
+  Whoops/Django debug consoles (CWE-489), directory listing (CWE-548), internal-IP
+  disclosure (CWE-200), secrets-in-URL (CWE-598), HTML-comment leaks (CWE-615)),
+  `engine.py` (`PassiveScan.analyze(status,url,headers,body)` / `.analyze_record` —
+  runs rules + folds in `secrets.scan_text`; covers what headers/ & secrets/ don't).
+  Runs over responses already captured, so it can analyze every response for free.
+  CLI: `python3 -m deluluscan.passive --url … | --stdin`. `tests/test_passive.py`.
 - `deluluscan/agentic/` — exploitation-chain agent (WS-2): `capabilities.py`
   (allowlisted safe primitives via injected toolbox), `agent.py` (`ExploitChainAgent`:
   bounded observe->act->verify loop, step budget, state-changing opt-in + approval gate,
