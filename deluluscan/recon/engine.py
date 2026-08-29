@@ -55,6 +55,8 @@ class ReconProfile:
     edges: list = field(default_factory=list)          # detected WAF/CDN/proxy (passive)
     js_endpoints: list = field(default_factory=list)   # list[{path, method, kind}] from JS
     takeover_findings: list = field(default_factory=list)  # subdomain-takeover Findings
+    dns: Optional[dict] = None                          # DNS/email intelligence
+    dns_findings: list = field(default_factory=list)    # SPF/DMARC/AXFR/email Findings
 
     def to_dict(self) -> dict:
         return {
@@ -67,6 +69,7 @@ class ReconProfile:
             "platform": self.platform,
             "edges": self.edges,
             "js_endpoints": self.js_endpoints,
+            "dns": self.dns,
         }
 
     def to_findings(self) -> list[Finding]:
@@ -101,8 +104,9 @@ class ReconProfile:
                 exploitability="conditional"))
         # 3) platform-intelligence findings (user enum, version, exposed surfaces)
         out.extend(self.platform_findings)
-        # 4a) subdomain takeover leads
+        # 4a) subdomain takeover leads + DNS/email intelligence
         out.extend(self.takeover_findings)
+        out.extend(self.dns_findings)
         # 4) shadow API surface recovered from client JS (OWASP API9 inventory)
         if self.js_endpoints:
             sample = ", ".join(sorted({e["path"] for e in self.js_endpoints})[:12])
@@ -239,7 +243,8 @@ class ReconEngine:
     def run(self, base_url: str, *, domain: Optional[str] = None,
             do_subdomains: bool = True, do_content: bool = True,
             resolve_subs: bool = True, do_platform: bool = True,
-            do_edge: bool = True, do_js: bool = True, max_scripts: int = 8) -> ReconProfile:
+            do_edge: bool = True, do_js: bool = True, max_scripts: int = 8,
+            do_dns: bool = True, dns_resolve=None, dns_axfr=None) -> ReconProfile:
         profile = ReconProfile(base_url=base_url)
         profile.techs = self.web_fingerprint(base_url)
         if do_content:
@@ -253,7 +258,25 @@ class ReconEngine:
             self._detect_edge(profile)
         if do_js:
             self._discover_js_endpoints(profile, max_scripts=max_scripts)
+        if do_dns and domain:
+            self._gather_dns(profile, domain, dns_resolve, dns_axfr)
         return profile
+
+    def _gather_dns(self, profile: ReconProfile, domain: str, resolve=None, axfr=None) -> None:
+        """Fold DNS/email intelligence (SPF/DMARC/AXFR/emails) into recon. Fail-soft."""
+        try:
+            from .dnsintel import DnsIntel
+            body = ""
+            try:
+                _, _, body = self.fetch(profile.base_url)
+            except Exception:
+                body = ""
+            di = DnsIntel(resolve=resolve, axfr=axfr)
+            prof, finds = di.run(domain, page_body=body or "")
+            profile.dns = prof.to_dict()
+            profile.dns_findings = finds
+        except Exception:
+            pass
 
     def _check_takeovers(self, profile: ReconProfile) -> None:
         """Check enumerated subdomains for dangling-DNS takeover fingerprints.
