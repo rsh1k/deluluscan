@@ -111,6 +111,19 @@ def test_findings_shape():
     check("profile round-trips to_dict", isinstance(prof.to_dict(), dict))
 
 
+def test_tls_folds_into_netscan():
+    # inject a tls_connect that only completes an old TLSv1.0 handshake
+    def tls_connect(host, port, label, ver, timeout=6.0):
+        return {"cipher": ("AES128-SHA", "TLSv1.0", 128), "cert_der": b""} if label == "TLSv1.0" else None
+    scan = NetScan(fetch=lambda u, m="GET", t=10: (200, {}, "ok"),
+                   connect=lambda h, p, t=1.5: None, tls_connect=tls_connect)
+    prof = scan.run("https://t", do_ports=False, do_waf=False, do_tls=True)
+    check("tls profile populated", prof.tls is not None and prof.tls["protocols"].get("TLSv1.0"))
+    findings = scan.to_findings(prof)
+    check("netscan emits deprecated-TLS finding", any("TLSv1.0" in f.title for f in findings),
+          [f.title for f in findings])
+
+
 if __name__ == "__main__":
     for fn in [v for k, v in sorted(globals().items()) if k.startswith("test_")]:
         fn()

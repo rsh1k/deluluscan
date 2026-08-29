@@ -33,6 +33,7 @@ def main(argv=None) -> int:
     ap.add_argument("--url", required=True)
     ap.add_argument("--no-ports", action="store_true")
     ap.add_argument("--no-waf", action="store_true")
+    ap.add_argument("--no-tls", action="store_true")
     ap.add_argument("--allow-remote", action="store_true",
                     help="assert authorization for a non-local target")
     ap.add_argument("--timeout", type=int, default=10)
@@ -44,7 +45,7 @@ def main(argv=None) -> int:
                          "--allow-remote only if you are authorized to test it.")
 
     scan = NetScan(timeout=args.timeout)
-    prof = scan.run(args.url, do_ports=not args.no_ports, do_waf=not args.no_waf)
+    prof = scan.run(args.url, do_ports=not args.no_ports, do_waf=not args.no_waf, do_tls=not args.no_tls)
     findings = scan.to_findings(prof)
 
     if args.json:
@@ -63,6 +64,9 @@ def main(argv=None) -> int:
         print("  edge defence: none detected")
     if prof.ids_ips and prof.ids_ips.get("inline_drop_observed"):
         print("  IDS/IPS: inline drop inferred")
+    if prof.tls:
+        protos = [k for k, v in prof.tls.get("protocols", {}).items() if v]
+        print(f"  TLS: {', '.join(protos) or 'none'}")
     if prof.ports:
         print(f"  open ports ({len(prof.ports)}):")
         for p in prof.ports:
