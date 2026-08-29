@@ -54,6 +54,7 @@ class ReconProfile:
     platform_findings: list = field(default_factory=list)  # list[Finding]
     edges: list = field(default_factory=list)          # detected WAF/CDN/proxy (passive)
     js_endpoints: list = field(default_factory=list)   # list[{path, method, kind}] from JS
+    takeover_findings: list = field(default_factory=list)  # subdomain-takeover Findings
 
     def to_dict(self) -> dict:
         return {
@@ -100,6 +101,8 @@ class ReconProfile:
                 exploitability="conditional"))
         # 3) platform-intelligence findings (user enum, version, exposed surfaces)
         out.extend(self.platform_findings)
+        # 4a) subdomain takeover leads
+        out.extend(self.takeover_findings)
         # 4) shadow API surface recovered from client JS (OWASP API9 inventory)
         if self.js_endpoints:
             sample = ", ".join(sorted({e["path"] for e in self.js_endpoints})[:12])
@@ -243,6 +246,7 @@ class ReconEngine:
             profile.paths, profile.exposures = self.content_discovery(base_url)
         if do_subdomains and domain:
             profile.subdomains = self.enumerate_subdomains(domain, resolve=resolve_subs)
+            self._check_takeovers(profile)
         if do_platform:
             self._detect_platform(profile)
         if do_edge:
@@ -250,6 +254,17 @@ class ReconEngine:
         if do_js:
             self._discover_js_endpoints(profile, max_scripts=max_scripts)
         return profile
+
+    def _check_takeovers(self, profile: ReconProfile) -> None:
+        """Check enumerated subdomains for dangling-DNS takeover fingerprints.
+        Reuses the recon fetch. Fail-soft."""
+        try:
+            from .takeover import check_subdomains
+            def _fetch(url):
+                return self.fetch(url)
+            profile.takeover_findings = check_subdomains(_fetch, profile.subdomains)
+        except Exception:
+            pass
 
     def _discover_js_endpoints(self, profile: ReconProfile, *, max_scripts: int = 8) -> None:
         """Statically extract API endpoints from the home page's inline JS and its
