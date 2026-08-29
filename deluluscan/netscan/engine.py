@@ -20,6 +20,7 @@ from urllib.parse import urlparse
 from ..models import Finding, RequestRecord, Severity, VulnClass
 from .waf import WafScan
 from .ports import PortScan, COMMON_PORTS
+from .tls import TlsScan
 from . import honeypot as _honeypot
 
 
@@ -30,6 +31,7 @@ class NetProfile:
     ports: list = field(default_factory=list)         # list[PortResult]
     honeypot_leads: list = field(default_factory=list)
     ids_ips: Optional[dict] = None
+    tls: Optional[dict] = None
 
     def to_dict(self) -> dict:
         return {
@@ -42,25 +44,34 @@ class NetProfile:
                                 "evidence": h.evidence, "matched": h.matched}
                                for h in self.honeypot_leads],
             "ids_ips": self.ids_ips,
+            "tls": self.tls,
         }
 
 
 class NetScan:
     def __init__(self, fetch: Optional[Callable] = None, connect: Optional[Callable] = None,
-                 timeout: int = 10):
+                 tls_connect: Optional[Callable] = None, timeout: int = 10):
         self.waf = WafScan(fetch=fetch, timeout=timeout)
         self.portscan = PortScan(connect=connect)
+        self.tlsscan = TlsScan(connect=tls_connect)
         self._fetch = self.waf.fetch
 
     def run(self, url: str, *, do_ports: bool = True, do_waf: bool = True,
-            ports=COMMON_PORTS) -> NetProfile:
-        host = urlparse(url).hostname or url
+            do_tls: bool = True, ports=COMMON_PORTS) -> NetProfile:
+        parsed = urlparse(url)
+        host = parsed.hostname or url
         prof = NetProfile(target=url)
         if do_waf:
             prof.edges = self.waf.detect(url, active=True)
             prof.ids_ips = self._infer_ids_ips(url)
         if do_ports:
             prof.ports = self.portscan.scan(host, ports=ports)
+        if do_tls and (parsed.scheme == "https" or parsed.port == 443 or not parsed.scheme):
+            tport = parsed.port or 443
+            tp = self.tlsscan.scan(host, tport)
+            if tp.protocols and (any(tp.protocols.values()) or tp.error):
+                prof.tls = tp.to_dict()
+                prof._tls_profile = tp   # kept for to_findings
         # honeypot heuristics fold in whatever we gathered
         banners = [p.banner for p in prof.ports if p.banner]
         prof.honeypot_leads = _honeypot.assess(
@@ -132,4 +143,8 @@ class NetScan:
                 endpoint=base, description=prof.ids_ips["note"],
                 detail={**prof.ids_ips, "source": "netscan.ids_ips"},
                 confidence="tentative"))
+
+        tp = getattr(prof, "_tls_profile", None)
+        if tp is not None:
+            out.extend(self.tlsscan.to_findings(tp))
         return out
