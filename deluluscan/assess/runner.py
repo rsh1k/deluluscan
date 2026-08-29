@@ -83,11 +83,17 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
                        netscan_fetch: Optional[Callable] = None,
                        netscan_connect: Optional[Callable] = None,
                        passive_fetch: Optional[Callable] = None,
-                       crawl_driver=None) -> Assessment:
+                       crawl_driver=None,
+                       smuggling_send: Optional[Callable] = None,
+                       adintel_smb_probe: Optional[Callable] = None,
+                       adintel_ldap_probe: Optional[Callable] = None) -> Assessment:
     """Live-run the web-facing modules and merge. recon auto-folds platform
-    intelligence + version-gated CVEs + passive edge detection; netscan adds
-    active WAF/CDN + honeypot + IDS/IPS (+ ports when netscan_ports=True); passive
-    adds response-body analysis. Pass the *_fetch args to run offline in tests."""
+    intelligence + version-gated CVEs + passive edge detection + TLS/DNS/subdomain-
+    takeover; netscan adds active WAF/CDN + honeypot + IDS/IPS + TLS (+ ports when
+    netscan_ports=True); passive adds response-body analysis. OPT-IN modules (only
+    when named in `modules`): crawl (headless browser), smuggling (timing-only
+    desync), adintel (SMB/LDAP posture). Pass the *_fetch/*_probe/*_send args to
+    run offline in tests."""
     mods = modules if modules is not None else (
         ["recon", "headers", "secrets", "netscan", "passive"]
         + (["webapi"] if graphql_url else []))
@@ -151,6 +157,32 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
                     driver.close()
             except Exception:
                 pass
+
+    # HTTP request smuggling: OPT-IN (timing probes touch shared infrastructure).
+    if "smuggling" in mods:
+        from ..active.smuggling import SmugglingProbe
+        from urllib.parse import urlparse as _up
+        u = _up(target)
+        host = u.hostname or target
+        port = u.port or (443 if u.scheme == "https" else 80)
+        try:
+            _, finds = SmugglingProbe(send=smuggling_send).run(
+                host, port, u.path or "/", use_tls=(u.scheme == "https"))
+            a.add(finds, "smuggling")
+        except Exception:
+            a.modules_run.append("smuggling")
+
+    # SMB/LDAP posture: OPT-IN (detection-only internal-network misconfigs).
+    if "adintel" in mods:
+        from ..netscan.adintel import AdIntel
+        from urllib.parse import urlparse as _up
+        host = _up(target).hostname or target
+        try:
+            _, finds = AdIntel(smb_probe=adintel_smb_probe,
+                               ldap_probe=adintel_ldap_probe).run(host)
+            a.add(finds, "adintel")
+        except Exception:
+            a.modules_run.append("adintel")
 
     # source + contract (offline; run whenever a path is supplied, independent of `mods`)
     if sast_path:

@@ -128,6 +128,25 @@ def test_crawl_module_failsoft_without_driver():
     check("crawl module recorded even on failure", "crawl" in a.modules_run, a.modules_run)
 
 
+def test_smuggling_and_adintel_optin_merge():
+    def smuggling_send(host, port, tls, raw, timeout):
+        # CL.TE payload hangs, everything else fast -> one desync finding
+        return timeout if (b"Transfer-Encoding" in raw and raw.rstrip().endswith(b"1\r\nA\r\nX")) else 0.05
+    def smb_probe(h):
+        return {"reachable": True, "dialect": "0x311", "signing_required": False, "smbv1": False}
+    def ldap_probe(h):
+        return {"reachable": True, "anonymous_bind": True, "naming_contexts": ["DC=corp,DC=local"]}
+    a = run_web_assessment(
+        "http://10.0.0.9/", modules=["smuggling", "adintel"],
+        smuggling_send=smuggling_send, adintel_smb_probe=smb_probe, adintel_ldap_probe=ldap_probe)
+    titles = [f.title for f in a.findings]
+    check("smuggling module recorded", "smuggling" in a.modules_run, a.modules_run)
+    check("adintel module recorded", "adintel" in a.modules_run, a.modules_run)
+    check("desync finding merged", any("request smuggling" in t.lower() for t in titles), titles)
+    check("smb signing finding merged", any("signing not required" in t for t in titles), titles)
+    check("ldap anon finding merged", any("anonymous bind" in t for t in titles), titles)
+
+
 def test_assess_includes_sast_and_apispec():
     import tempfile, json as _json
     d = tempfile.mkdtemp()
