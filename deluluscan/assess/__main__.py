@@ -36,6 +36,10 @@ def main(argv=None):
                    help="also run the netscan TCP port/service scan (opens sockets; loopback/RFC1918)")
     p.add_argument("--crawl", action="store_true",
                    help="run the dynamic headless-browser crawl (needs the optional playwright dep)")
+    p.add_argument("--smuggling", action="store_true",
+                   help="run the timing-only HTTP request-smuggling detector (touches shared infra)")
+    p.add_argument("--adintel", action="store_true",
+                   help="run SMB/LDAP posture detection on the target host (detection-only)")
     p.add_argument("--formats", default="md,html,json,sarif",
                    help="comma list: json,md,html,sarif,csv,xlsx,junit")
     p.add_argument("--out-dir", default="./deluluscan-report")
@@ -44,11 +48,14 @@ def main(argv=None):
     if not _is_local(a.url) and not a.allow_remote:
         raise SystemExit(f"[scope] {a.url} is not loopback/RFC1918; use --allow-remote if authorized.")
     mods = [m.strip() for m in a.modules.split(",")] if a.modules else None
-    if a.crawl and mods is None:
-        # default set + opt-in crawl
-        mods = ["recon", "headers", "secrets", "netscan", "passive"] + (["webapi"] if a.graphql else []) + ["crawl"]
-    elif a.crawl and "crawl" not in mods:
-        mods = mods + ["crawl"]
+    # opt-in modules: append to the explicit list, or to the default set
+    optin = [name for name, on in (("crawl", a.crawl), ("smuggling", a.smuggling),
+                                   ("adintel", a.adintel)) if on]
+    if optin:
+        if mods is None:
+            mods = (["recon", "headers", "secrets", "netscan", "passive"]
+                    + (["webapi"] if a.graphql else []))
+        mods = mods + [m for m in optin if m not in mods]
     assessment = run_web_assessment(a.url, domain=a.domain, graphql_url=a.graphql, modules=mods,
                                     sast_path=a.sast_path, spec_path=a.spec,
                                     netscan_ports=a.netscan_ports)
