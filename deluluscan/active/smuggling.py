@@ -140,7 +140,11 @@ class SmugglingProbe:
                 exploitability="unknown",
                 detail={"variant": r.variant, "baseline_s": r.baseline_s,
                         "probe_s": r.probe_s, "cwe": "CWE-444", "basis": "timing_differential",
-                        "source": "active.smuggling"}))
+                        "source": "active.smuggling",
+                        "remediation": ("Use a single, unambiguous HTTP parser end-to-end (prefer "
+                                        "HTTP/2 to the back-end); reject any request carrying both "
+                                        "Content-Length and Transfer-Encoding, and normalise/close "
+                                        "connections on ambiguous framing.")}))
         return out
 
     def run(self, host: str, port: int = 80, path: str = "/", use_tls: bool = False):

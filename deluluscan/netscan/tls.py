@@ -98,11 +98,15 @@ class TlsScan:
         ep = f"{prof.host}:{prof.port}"
         rec = RequestRecord(method="TLS", url=ep, identity="anon", status=0, elapsed_ms=0.0)
 
+        _REM = ("Offer only TLS 1.2+ (disable SSLv3/TLS 1.0/1.1); deploy a valid CA-issued "
+                "certificate whose SAN covers the host, with a >=2048-bit RSA (or ECDSA) key and a "
+                "SHA-256+ signature; prefer ECDHE cipher suites for forward secrecy; renew before expiry.")
+
         def add(sev, title, desc, detail):
             out.append(Finding(vuln_class=VulnClass.CRYPTO, severity=sev, title=title,
                                endpoint=ep, description=desc, evidence=[rec],
-                               detail={**detail, "source": "netscan.tls"}, confidence="firm",
-                               verdict="true_positive", exploitability="conditional"))
+                               detail={**detail, "source": "netscan.tls", "remediation": _REM},
+                               confidence="firm", verdict="true_positive", exploitability="conditional"))
 
         for label, ver, dep in _PROTOCOLS:
             if dep and prof.protocols.get(label):

@@ -117,11 +117,15 @@ class DnsIntel:
         out: list = []
         rec = RequestRecord(method="DNS", url=prof.domain, identity="anon", status=0, elapsed_ms=0.0)
 
+        _REM = ("Publish an SPF record ending in -all, a DMARC policy of p=quarantine or p=reject "
+                "with aligned DKIM signing, and restrict zone transfers (AXFR) to authorized "
+                "secondary nameservers only; minimise email addresses exposed in page source.")
+
         def add(vc, sev, title, desc, detail, conf="firm", verdict="likely_true_positive"):
             out.append(Finding(vuln_class=vc, severity=sev, title=title, endpoint=prof.domain,
                                description=desc, evidence=[rec], confidence=conf, verdict=verdict,
                                exploitability="conditional",
-                               detail={**detail, "source": "recon.dnsintel"}))
+                               detail={**detail, "source": "recon.dnsintel", "remediation": _REM}))
 
         # SPF
         if prof.records.get("TXT") is not None:

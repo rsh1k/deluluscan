@@ -107,13 +107,16 @@ class AdIntel:
     def to_findings(self, prof: AdProfile) -> list:
         out: list = []
 
+        _REM = ("Require SMB message signing on servers and clients; disable SMBv1 (CIFS) entirely; "
+                "require authenticated LDAP binds and restrict/deny anonymous directory reads.")
+
         def add(vc, sev, title, desc, detail, port):
             rec = RequestRecord(method="PROBE", url=f"{prof.host}:{port}", identity="anon",
                                 status=0, elapsed_ms=0.0)
             out.append(Finding(vuln_class=vc, severity=sev, title=title, endpoint=f"{prof.host}:{port}",
                                description=desc, evidence=[rec], confidence="firm",
                                verdict="likely_true_positive", exploitability="conditional",
-                               detail={**detail, "source": "netscan.adintel"}))
+                               detail={**detail, "source": "netscan.adintel", "remediation": _REM}))
 
         smb = prof.smb or {}
         if smb.get("reachable"):

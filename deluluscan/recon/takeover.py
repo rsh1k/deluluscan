@@ -113,5 +113,8 @@ def check_subdomains(fetch: Callable, subdomains: list, *, resolve_cname=None,
             verdict="likely_true_positive" if sig.confidence == "firm" else "inconclusive",
             exploitability="conditional",
             detail={"subdomain": name, "provider": sig.provider, "cname": cname,
-                    "source": "recon.takeover"}))
+                    "source": "recon.takeover",
+                    "remediation": ("Remove the dangling DNS record, or reclaim the referenced "
+                                    "resource on the provider before an attacker does; "
+                                    "continuously monitor for dangling CNAMEs to retired services.")}))
     return out
