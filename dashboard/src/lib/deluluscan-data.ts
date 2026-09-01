@@ -173,6 +173,33 @@ export interface Scan {
   identities: string[];
 }
 
+/** Security domain ("surface") a finding belongs to, derived from its producing
+ *  module (detail.source). Groups the network-posture findings — TLS, DNS,
+ *  takeover, request smuggling, SMB/LDAP, edge — as first-class alongside Web/API,
+ *  so the report can facet by attack surface, not just by OWASP class. */
+export function surfaceOf(f: Finding): string {
+  const src = String((f.detail as Record<string, unknown>)?.source ?? '');
+  if (src === 'netscan.tls') return 'Transport (TLS)';
+  if (src === 'recon.dnsintel') return 'DNS / Email';
+  if (src === 'recon.takeover') return 'Subdomain takeover';
+  if (src === 'active.smuggling') return 'Request smuggling';
+  if (src === 'netscan.adintel') return 'Network (SMB/LDAP)';
+  if (src === 'netscan.ports') return 'Network (ports)';
+  if (src.startsWith('netscan')) return 'Edge (WAF/CDN)';
+  if (src === 'recon.jsanalysis' || src === 'crawler') return 'API inventory';
+  if (src.startsWith('platforms')) return 'Platform';
+  if (src === 'passive') return 'Passive';
+  if (src.startsWith('recon')) return 'Recon';
+  return 'Web / API';
+}
+
+/** Order surfaces sensibly when rendered as facet chips. */
+export const SURFACE_ORDER = [
+  'Web / API', 'API inventory', 'Platform', 'Transport (TLS)', 'DNS / Email',
+  'Subdomain takeover', 'Request smuggling', 'Edge (WAF/CDN)', 'Network (ports)',
+  'Network (SMB/LDAP)', 'Passive', 'Recon',
+];
+
 export interface EncBlob {
   v: number;
   iter: number;

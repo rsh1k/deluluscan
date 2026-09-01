@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Scan, ScanFinding } from '@/lib/deluluscan-data';
+import { surfaceOf, SURFACE_ORDER } from '@/lib/deluluscan-data';
 import {
   CLOSED_STATUSES,
   EXPLOIT_LABEL,
@@ -87,6 +88,7 @@ export default function FindingsView({ scan, triage, onSelect, selectedId }: {
   const all = scan.findings ?? [];
   const [sevFilter, setSevFilter] = useState<string[]>([]);
   const [clsFilter, setClsFilter] = useState<string[]>([]);
+  const [surfFilter, setSurfFilter] = useState<string[]>([]);
   const [confirmedOnly, setConfirmedOnly] = useState(false);
   const [showClosed, setShowClosed] = useState(false);
   const [q, setQ] = useState('');
@@ -107,6 +109,13 @@ export default function FindingsView({ scan, triage, onSelect, selectedId }: {
     [all]
   );
 
+  const surfaces = useMemo(() => {
+    const present = new Set(all.map(surfaceOf));
+    return SURFACE_ORDER.filter((s) => present.has(s)).concat(
+      [...present].filter((s) => !SURFACE_ORDER.includes(s)).sort()
+    );
+  }, [all]);
+
   const visible = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const rows = all.filter((f) => {
@@ -114,6 +123,7 @@ export default function FindingsView({ scan, triage, onSelect, selectedId }: {
       if (closed !== showClosed) return false;
       if (sevFilter.length && !sevFilter.includes(f.severity)) return false;
       if (clsFilter.length && !clsFilter.includes(f.owasp?.code ?? '')) return false;
+      if (surfFilter.length && !surfFilter.includes(surfaceOf(f))) return false;
       if (confirmedOnly && !isConfirmed(f)) return false;
       if (
         needle &&
@@ -141,7 +151,7 @@ export default function FindingsView({ scan, triage, onSelect, selectedId }: {
       const kb = key(b);
       return (ka < kb ? -1 : ka > kb ? 1 : 0) * dir;
     });
-  }, [all, q, sevFilter, clsFilter, confirmedOnly, showClosed, sort, dir, triage]);
+  }, [all, q, sevFilter, clsFilter, surfFilter, confirmedOnly, showClosed, sort, dir, triage]);
 
   const active = all.filter((f) => !CLOSED_STATUSES.has(status(f)));
   const confirmed = active.filter(isConfirmed);
@@ -320,6 +330,18 @@ export default function FindingsView({ scan, triage, onSelect, selectedId }: {
           </div>
         }
       >
+        {surfaces.length > 1 && (
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] uppercase tracking-wide text-slate-500">Surface</span>
+            {surfaces.map((s) => (
+              <button key={s} type="button" onClick={() => toggle(surfFilter, s, setSurfFilter)}>
+                <Pill color={surfFilter.includes(s) ? '#0f766e' : undefined} title="Attack surface / security domain">
+                  {s}
+                </Pill>
+              </button>
+            ))}
+          </div>
+        )}
         {classes.length > 1 && (
           <div className="mb-3 flex flex-wrap gap-1.5">
             {classes.map((c) => (
@@ -329,12 +351,13 @@ export default function FindingsView({ scan, triage, onSelect, selectedId }: {
                 </Pill>
               </button>
             ))}
-            {(sevFilter.length > 0 || clsFilter.length > 0 || q !== '' || confirmedOnly) && (
+            {(sevFilter.length > 0 || clsFilter.length > 0 || surfFilter.length > 0 || q !== '' || confirmedOnly) && (
               <button
                 type="button"
                 onClick={() => {
                   setSevFilter([]);
                   setClsFilter([]);
+                  setSurfFilter([]);
                   setQ('');
                   setConfirmedOnly(false);
                 }}
