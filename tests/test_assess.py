@@ -147,6 +147,25 @@ def test_smuggling_and_adintel_optin_merge():
     check("ldap anon finding merged", any("anonymous bind" in t for t in titles), titles)
 
 
+def test_epss_enrichment_optin():
+    from deluluscan.models import Finding, Severity, VulnClass
+    # a recon_fetch that makes recon emit a Jenkins CVE finding (version-gated)
+    def recon_fetch(url, method="GET"):
+        if url.rstrip("/").endswith("t") or url.endswith("/"):
+            return 200, {"x-jenkins": "2.426.1"}, "Jenkins ver. 2.426.1 Dashboard [Jenkins]"
+        return 404, {}, ""
+    def epss_fetch(cves, timeout=12):
+        return {"CVE-2024-23897": {"epss": 0.88, "percentile": 0.99}}
+    a = run_web_assessment("http://t/", modules=["recon"], recon_fetch=recon_fetch,
+                           epss=True, epss_fetch=epss_fetch)
+    cve_finds = [f for f in a.findings if f.detail.get("cve")]
+    check("a CVE finding is present", len(cve_finds) >= 1, [f.title for f in a.findings])
+    enriched = [f for f in cve_finds if f.detail.get("epss")]
+    check("CVE finding got EPSS", len(enriched) >= 1, [f.detail for f in cve_finds])
+    check("EPSS band computed", enriched and enriched[0].detail["epss"]["band"] == "critical")
+    check("epss module recorded", "epss" in a.modules_run, a.modules_run)
+
+
 def test_assess_includes_sast_and_apispec():
     import tempfile, json as _json
     d = tempfile.mkdtemp()

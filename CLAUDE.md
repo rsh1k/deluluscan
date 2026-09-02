@@ -298,6 +298,13 @@ via `--mantis-findings-dir` when the corpus exists.
   knowledge = *how to test & verify each class*. Wired into `reporting/evidence_report.py`
   `build_report` (fills each finding's remediation + `verify_steps` + taxonomy references
   from the corpus). Inspect: `python3 -m deluluscan.knowledge`. `tests/test_knowledge.py`.
+- `deluluscan/epss.py` — EPSS enrichment (prioritize by real-world exploit
+  probability, not just CVSS): `EpssClient.scores` batch-queries the FIRST.org EPSS
+  API (injected fetch → offline-testable, fail-soft, cached); `attach_epss(findings)`
+  annotates any finding carrying `detail["cve"]` (the version-gated CVEs from
+  `platforms/cves.py`) with `detail["epss"]={score,percentile,band}` (band:
+  low/elevated/critical at 0.10/0.50). Opt-in in the assess pipeline (`--epss`,
+  `epss=True`, post-processing, fail-soft). `tests/test_epss.py`.
 - `deluluscan/telemetry/` — grey-box observability plane (`--observe`): `sources.py`
   (fail-soft `DockerLogSource`/`DockerStatsSource`, tap the target container's
   logs/mem/CPU — no agent inside it), `recorder.py` (`Recorder`: thread-safe,

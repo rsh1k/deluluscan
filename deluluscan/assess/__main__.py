@@ -40,6 +40,8 @@ def main(argv=None):
                    help="run the timing-only HTTP request-smuggling detector (touches shared infra)")
     p.add_argument("--adintel", action="store_true",
                    help="run SMB/LDAP posture detection on the target host (detection-only)")
+    p.add_argument("--epss", action="store_true",
+                   help="rank CVE findings by EPSS exploit probability (queries the FIRST.org API)")
     p.add_argument("--formats", default="md,html,json,sarif",
                    help="comma list: json,md,html,sarif,csv,xlsx,junit")
     p.add_argument("--out-dir", default="./deluluscan-report")
@@ -58,7 +60,7 @@ def main(argv=None):
         mods = mods + [m for m in optin if m not in mods]
     assessment = run_web_assessment(a.url, domain=a.domain, graphql_url=a.graphql, modules=mods,
                                     sast_path=a.sast_path, spec_path=a.spec,
-                                    netscan_ports=a.netscan_ports)
+                                    netscan_ports=a.netscan_ports, epss=a.epss)
     payload = assessment.payload()
     written = write_reports(payload, a.out_dir, [f for f in a.formats.split(",") if f.strip()])
     print(f"[assess] {a.url}: {payload['meta']['finding_count']} finding(s) "
