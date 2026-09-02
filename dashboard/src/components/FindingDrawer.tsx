@@ -96,6 +96,12 @@ function ReportTab({ f }: { f: ScanFinding }) {
                   EPSS · {(e.score * 100).toFixed(1)}%
                 </Pill>
               )}
+              {Array.isArray(det.attack) &&
+                (det.attack as Array<{ id?: string; name?: string; tactic?: string }>).map((t) => (
+                  <Pill key={t.id} title={`MITRE ATT&CK · ${t.tactic}: ${t.name}`}>
+                    ATT&CK {t.id}
+                  </Pill>
+                ))}
             </>
           );
         })()}
