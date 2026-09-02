@@ -6,7 +6,7 @@ web, API, application, container/Kubernetes, cloud, and **LLM/AI-system** target
 [![PyPI](https://img.shields.io/pypi/v/deluluscan.svg)](https://pypi.org/project/deluluscan/)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-65_suites_green-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-73_suites_green-brightgreen.svg)](tests/)
 [![Local AI](https://img.shields.io/badge/AI-Claude%20%7C%20OpenAI%20%7C%20DeepSeek%20%7C%20Ollama-8a2be2.svg)](docs/LOCAL_MODELS.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -44,8 +44,12 @@ leaves your host.
   (18 vendors: Cloudflare/Akamai/Fastly/Imperva/…), open ports/services, honeypot & IDS/IPS.
 - **Broad coverage, one tool.** Web · API (REST/GraphQL/WebSocket/gRPC) · headers/CORS/cookies
   · secrets · **passive analysis (ZAP-style)** · **JS/SPA endpoint discovery (static + optional
-  headless-browser crawl)** · **LLM/AI systems (OWASP LLM Top 10)** · containers/K8s · cloud
-  (CSPM) · source (SAST) · API specs.
+  headless-browser crawl)** · **TLS/SSL · DNS/email · subdomain takeover · HTTP request
+  smuggling (timing-only) · SMB/LDAP posture** · **LLM/AI systems (OWASP LLM Top 10)** ·
+  containers/K8s · cloud (CSPM) · source (SAST) · API specs.
+- **Prioritized like modern ASPM.** Every finding is ranked by real-world risk — **EPSS**
+  exploit probability, **CISA KEV** (confirmed exploited), a combined **0–100 priority score**,
+  and **MITRE ATT&CK** technique tags — so you fix what matters first, not just what scores high.
 
 ## Install
 
@@ -90,7 +94,9 @@ for running a model on a low-RAM / WSL / non-NVIDIA machine.
 | **Web / API scanning** | `scanners/`, `verify/` | 43 checks across the OWASP API/Web Top 10, with a deep differential verification layer (identity matrix, filter-bypass, read-back sink classification, weaponizability grading). Burp-style Intruder (sniper/battering-ram/pitchfork/cluster-bomb). |
 | **Reconnaissance** | `recon/` | Tech/JS-library fingerprint (+ known-vulnerable versions), CT-log subdomain enumeration, content discovery, and **static JS endpoint extraction** (fetch/axios/XHR → shadow API surface). |
 | **Platform intelligence** | `platforms/` | Fingerprints **23 platforms** (WordPress/Drupal/Joomla, Laravel/Django/Rails/Spring/Tomcat, Jenkins/GitLab/Grafana/Kibana, Elasticsearch/Kubernetes, …) → API shape, auth model, sensitive surfaces, user-enum & version disclosure, plus **version-gated known CVEs** (Nessus-plugin model). |
-| **Edge / network recon** | `netscan/` | WAF/CDN/proxy detection (**18 vendors**, wafw00f-style passive+active), TCP port/service scan + banner grab, honeypot heuristics, IDS/IPS inference. |
+| **Edge / network recon** | `netscan/` | WAF/CDN/proxy detection (**18 vendors**, wafw00f-style passive+active), TCP port/service scan + banner grab, **TLS/SSL config** (deprecated protocols, weak/expired/mismatched certs, no-PFS), honeypot heuristics, IDS/IPS inference, **SMB/LDAP posture** (signing, SMBv1, anonymous bind). |
+| **OSINT & takeover** | `recon/` | DNS/email intel (**SPF/DMARC/AXFR** + email harvest), **subdomain-takeover** fingerprints (14 providers, CNAME-corroborated). |
+| **Prioritization** | `epss/`,`kev/`,`priority/`,`attack/` | Ranks findings by real-world risk: **EPSS** exploit probability, **CISA KEV** (confirmed exploited), a combined **0–100 priority score**, and **MITRE ATT&CK** technique tagging. |
 | **Passive analysis** | `passive/` | ZAP-style, no extra requests — stack traces / SQL errors, debug consoles (Werkzeug/Whoops/Django), directory listing, internal-IP & secrets-in-URL, HTML-comment leaks. Runs over every collected response. |
 | **Dynamic crawl** | `crawler/` | Optional headless-browser (Playwright) AJAX-spider: renders JS-heavy apps and captures the API calls the client actually makes — the dynamic surface a static parse can't resolve. |
 | **HTTP hardening** | `headers/` | Security headers, CORS (wildcard / reflected-origin-with-credentials), cookie flags. |
