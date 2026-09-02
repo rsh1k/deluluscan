@@ -218,4 +218,11 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
             attach_priority(a.findings)
         except Exception:
             pass
+    # ATT&CK technique tagging: always on (pure data, no network) — ties each
+    # finding to the adversary technique it enables.
+    try:
+        from ..attack import attach_attack
+        attach_attack(a.findings)
+    except Exception:
+        pass
     return a

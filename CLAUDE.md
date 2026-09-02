@@ -317,6 +317,12 @@ via `--mantis-findings-dir` when the corpus exists.
   list; `attach_priority(findings)` sets `detail["priority"]`. A live false-positive
   verdict sinks to 0; an exploited medium can outrank a theoretical critical. Runs
   in the assess pipeline whenever `--epss`/`--kev` is on. `tests/test_priority.py`.
+- `deluluscan/attack.py` — MITRE ATT&CK technique tagging: a `VulnClass`→`Technique`
+  base map refined per `detail["source"]` for the network-posture classes (TLS→
+  T1040/T1557, SSRF→T1552.005 IMDS, SMB/LDAP→T1557.001/T1087, DNS→T1598, …);
+  `attach_attack(findings)` sets `detail["attack"]=[{tactic,id,name,url}]`. Runs
+  ALWAYS in the assess pipeline (pure data, no network). Dashboard shows ATT&CK
+  pills on the finding drawer. `tests/test_attack.py`.
 - `deluluscan/telemetry/` — grey-box observability plane (`--observe`): `sources.py`
   (fail-soft `DockerLogSource`/`DockerStatsSource`, tap the target container's
   logs/mem/CPU — no agent inside it), `recorder.py` (`Recorder`: thread-safe,

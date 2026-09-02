@@ -187,6 +187,20 @@ def test_kev_and_priority_enrichment():
     check("epss + kev modules recorded", {"epss", "kev"} <= set(a.modules_run), a.modules_run)
 
 
+def test_attack_tagging_always_on():
+    def recon_fetch(url, method="GET"):
+        if url.endswith("/.git/HEAD"):
+            return 200, {}, "ref: refs/heads/main"
+        if url.rstrip("/").endswith("t") or url.endswith("/"):
+            return 200, {"server": "nginx"}, "<html>ok</html>"
+        return 404, {}, ""
+    a = run_web_assessment("http://t/", modules=["recon"], recon_fetch=recon_fetch)
+    tagged = [f for f in a.findings if f.detail.get("attack")]
+    check("findings carry ATT&CK techniques", len(tagged) >= 1, len(a.findings))
+    check("technique has id+tactic+url",
+          tagged and all(k in tagged[0].detail["attack"][0] for k in ("id", "tactic", "url")))
+
+
 def test_assess_includes_sast_and_apispec():
     import tempfile, json as _json
     d = tempfile.mkdtemp()
