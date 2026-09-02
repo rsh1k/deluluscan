@@ -83,13 +83,13 @@ jobs:
       contents: read
     steps:
       - name: Checkout scan-data branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: scan-data
           path: deluluscan-scan-data
 
       - name: Checkout target-aios
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: the target/target-aios
           token: ${{ secrets.TARGET_AIOS_PUSH_TOKEN }}
