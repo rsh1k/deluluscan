@@ -72,6 +72,18 @@ function ReportTab({ f }: { f: ScanFinding }) {
         {f.confidence && <Pill>Confidence · {f.confidence}</Pill>}
         {f.cwe && <Pill>{f.cwe}</Pill>}
         {f.owasp?.code && <Pill>OWASP {f.owasp.code}</Pill>}
+        {(() => {
+          const e = (f.detail as Record<string, unknown>)?.epss as
+            | { score?: number; band?: string }
+            | undefined;
+          if (!e || typeof e.score !== 'number') return null;
+          const color = e.band === 'critical' ? '#be123c' : e.band === 'elevated' ? '#b45309' : undefined;
+          return (
+            <Pill color={color} title="EPSS: probability of exploitation in the next 30 days (FIRST.org)">
+              EPSS · {(e.score * 100).toFixed(1)}%
+            </Pill>
+          );
+        })()}
         {mem && <Pill color={isRecurring(f) ? '#be123c' : undefined}>↻ {isRecurring(f) ? 'Recurring' : 'Seen before'}</Pill>}
       </div>
 
