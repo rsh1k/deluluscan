@@ -73,15 +73,30 @@ function ReportTab({ f }: { f: ScanFinding }) {
         {f.cwe && <Pill>{f.cwe}</Pill>}
         {f.owasp?.code && <Pill>OWASP {f.owasp.code}</Pill>}
         {(() => {
-          const e = (f.detail as Record<string, unknown>)?.epss as
-            | { score?: number; band?: string }
-            | undefined;
-          if (!e || typeof e.score !== 'number') return null;
-          const color = e.band === 'critical' ? '#be123c' : e.band === 'elevated' ? '#b45309' : undefined;
+          const det = (f.detail as Record<string, unknown>) ?? {};
+          const pri = det.priority as { score?: number; band?: string } | undefined;
+          const kev = det.kev as { in_kev?: boolean; ransomware?: boolean } | undefined;
+          const e = det.epss as { score?: number; band?: string } | undefined;
+          const bandColor = (b?: string) =>
+            b === 'critical' ? '#be123c' : b === 'high' || b === 'elevated' ? '#b45309' : undefined;
           return (
-            <Pill color={color} title="EPSS: probability of exploitation in the next 30 days (FIRST.org)">
-              EPSS · {(e.score * 100).toFixed(1)}%
-            </Pill>
+            <>
+              {pri && typeof pri.score === 'number' && (
+                <Pill color={bandColor(pri.band)} title="Combined priority: impact + real-world exploitation + reachability">
+                  Priority · {pri.score}
+                </Pill>
+              )}
+              {kev?.in_kev && (
+                <Pill color="#be123c" title="Listed in the CISA Known Exploited Vulnerabilities catalog">
+                  KEV{kev.ransomware ? ' · ransomware' : ''}
+                </Pill>
+              )}
+              {e && typeof e.score === 'number' && (
+                <Pill color={bandColor(e.band)} title="EPSS: probability of exploitation in the next 30 days (FIRST.org)">
+                  EPSS · {(e.score * 100).toFixed(1)}%
+                </Pill>
+              )}
+            </>
           );
         })()}
         {mem && <Pill color={isRecurring(f) ? '#be123c' : undefined}>↻ {isRecurring(f) ? 'Recurring' : 'Seen before'}</Pill>}

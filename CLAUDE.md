@@ -305,6 +305,18 @@ via `--mantis-findings-dir` when the corpus exists.
   `platforms/cves.py`) with `detail["epss"]={score,percentile,band}` (band:
   low/elevated/critical at 0.10/0.50). Opt-in in the assess pipeline (`--epss`,
   `epss=True`, post-processing, fail-soft). `tests/test_epss.py`.
+- `deluluscan/kev.py` — CISA KEV cross-reference: `KevCatalog` (injected fetch of
+  the public CISA Known-Exploited-Vulnerabilities feed, cached, fail-soft);
+  `attach_kev(findings)` marks any `detail["cve"]` in KEV with
+  `detail["kev"]={in_kev,date_added,due_date,ransomware}`. Opt-in `--kev`.
+  NB: `KevCatalog` defines `__len__` so an empty one is falsy — `attach_kev` uses
+  `is None`, never `catalog or …`. `tests/test_priority.py`.
+- `deluluscan/priority.py` — combined "fix this first" score: `compute_priority`
+  folds impact (severity) + exploitation (KEV fact + EPSS odds) + reachability
+  (live verdict/exploitability) into a 0-100 score + band + explainable factor
+  list; `attach_priority(findings)` sets `detail["priority"]`. A live false-positive
+  verdict sinks to 0; an exploited medium can outrank a theoretical critical. Runs
+  in the assess pipeline whenever `--epss`/`--kev` is on. `tests/test_priority.py`.
 - `deluluscan/telemetry/` — grey-box observability plane (`--observe`): `sources.py`
   (fail-soft `DockerLogSource`/`DockerStatsSource`, tap the target container's
   logs/mem/CPU — no agent inside it), `recorder.py` (`Recorder`: thread-safe,

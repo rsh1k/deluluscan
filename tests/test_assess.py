@@ -166,6 +166,27 @@ def test_epss_enrichment_optin():
     check("epss module recorded", "epss" in a.modules_run, a.modules_run)
 
 
+def test_kev_and_priority_enrichment():
+    def recon_fetch(url, method="GET"):
+        if url.rstrip("/").endswith("t") or url.endswith("/"):
+            return 200, {"x-jenkins": "2.426.1"}, "Jenkins ver. 2.426.1 Dashboard [Jenkins]"
+        return 404, {}, ""
+    def epss_fetch(cves, timeout=12):
+        return {"CVE-2024-23897": {"epss": 0.9, "percentile": 0.99}}
+    def kev_fetch(timeout=15):
+        return {"CVE-2024-23897": {"date_added": "2024-01-01", "due_date": "2024-01-15",
+                                   "name": "Jenkins CLI", "ransomware": False}}
+    a = run_web_assessment("http://t/", modules=["recon"], recon_fetch=recon_fetch,
+                           epss=True, epss_fetch=epss_fetch, kev=True, kev_fetch=kev_fetch)
+    cve = next((f for f in a.findings if f.detail.get("cve") == "CVE-2024-23897"), None)
+    check("CVE finding present", cve is not None)
+    check("KEV flag attached", cve and cve.detail.get("kev", {}).get("in_kev") is True)
+    check("priority score attached", cve and "priority" in cve.detail)
+    check("priority reflects KEV+EPSS (>=90)", cve and cve.detail["priority"]["score"] >= 90,
+          cve and cve.detail.get("priority"))
+    check("epss + kev modules recorded", {"epss", "kev"} <= set(a.modules_run), a.modules_run)
+
+
 def test_assess_includes_sast_and_apispec():
     import tempfile, json as _json
     d = tempfile.mkdtemp()

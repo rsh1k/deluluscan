@@ -87,7 +87,8 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
                        smuggling_send: Optional[Callable] = None,
                        adintel_smb_probe: Optional[Callable] = None,
                        adintel_ldap_probe: Optional[Callable] = None,
-                       epss: bool = False, epss_fetch: Optional[Callable] = None) -> Assessment:
+                       epss: bool = False, epss_fetch: Optional[Callable] = None,
+                       kev: bool = False, kev_fetch: Optional[Callable] = None) -> Assessment:
     """Live-run the web-facing modules and merge. recon auto-folds platform
     intelligence + version-gated CVEs + passive edge detection + TLS/DNS/subdomain-
     takeover; netscan adds active WAF/CDN + honeypot + IDS/IPS + TLS (+ ports when
@@ -193,14 +194,28 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
         from ..apispec import ApiSpecScan
         a.add(ApiSpecScan().scan_file(spec_path), "apispec")
 
-    # EPSS enrichment: OPT-IN (needs the FIRST.org API). Post-processing — ranks
-    # CVE findings by real-world exploit probability. Fail-soft.
+    # Prioritization: OPT-IN enrichment. EPSS (exploit probability, FIRST.org) and
+    # KEV (confirmed exploited, CISA) rank CVE findings by real-world risk; a
+    # combined priority score then folds impact + exploitation + reachability into
+    # one "fix this first" number on EVERY finding. All post-processing, fail-soft.
     if epss:
         try:
             from ..epss import attach_epss, EpssClient
-            client = EpssClient(fetch=epss_fetch) if epss_fetch else EpssClient()
-            attach_epss(a.findings, client)
+            attach_epss(a.findings, EpssClient(fetch=epss_fetch) if epss_fetch else EpssClient())
         except Exception:
             pass
         a.modules_run.append("epss")
+    if kev:
+        try:
+            from ..kev import attach_kev, KevCatalog
+            attach_kev(a.findings, KevCatalog(fetch=kev_fetch) if kev_fetch else KevCatalog())
+        except Exception:
+            pass
+        a.modules_run.append("kev")
+    if epss or kev:
+        try:
+            from ..priority import attach_priority
+            attach_priority(a.findings)
+        except Exception:
+            pass
     return a
