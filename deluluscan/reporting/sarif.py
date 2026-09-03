@@ -8,9 +8,24 @@ from __future__ import annotations
 
 import json
 import os
+import re
 
 _LEVEL = {"critical": "error", "high": "error", "medium": "warning",
           "low": "note", "info": "note"}
+# a SAST endpoint is "<path>:<line>"; a web endpoint is a URL — only split the former
+_FILE_LINE = re.compile(r"^(?P<path>(?!\w+://).+?):(?P<line>\d+)$")
+
+
+def _physical_location(endpoint: str) -> dict:
+    """Turn a finding endpoint into a SARIF physicalLocation. For a source
+    finding ("path/to/file.py:42") the line goes in region.startLine and the URI
+    is the bare file path, so GitHub code-scanning (and any SARIF viewer) can
+    anchor it. For a web URL the endpoint is kept as the artifact URI."""
+    m = _FILE_LINE.match(endpoint or "")
+    if m:
+        return {"artifactLocation": {"uri": m.group("path")},
+                "region": {"startLine": int(m.group("line"))}}
+    return {"artifactLocation": {"uri": endpoint or "unknown"}}
 
 
 def write_sarif(result: dict, out_dir: str) -> str:
@@ -35,11 +50,7 @@ def write_sarif(result: dict, out_dir: str) -> str:
                            "verdict": f.get("verdict"),
                            "exploitability": f.get("exploitability"),
                            "endpoint": f["endpoint"]},
-            "locations": [{
-                "physicalLocation": {
-                    "artifactLocation": {"uri": f["endpoint"]},
-                }
-            }],
+            "locations": [{"physicalLocation": _physical_location(f["endpoint"])}],
         })
     doc = {
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",

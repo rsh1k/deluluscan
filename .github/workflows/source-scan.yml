@@ -1,0 +1,74 @@
+name: Source security scan
+
+# Language-agnostic source-code security scan powered by Deluluscan's own SAST
+# engine (deluluscan/sast): dangerous-pattern rules per language (eval/exec/shell,
+# unsafe deserialization, SQL string-building, weak crypto, XSS sinks, disabled
+# TLS verification, …) plus secret detection. It scans WHATEVER source is checked
+# out — Python, JS/TS, Java, Ruby, PHP, Go, … — not any specific vendor or stack.
+#
+# Output is SARIF, so findings appear in this repo's Security ▸ Code scanning tab,
+# and the SARIF is also saved as a build artifact. No external services, no cross-
+# repo publishing, no credentials required.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 7 * * 1"          # weekly, Monday 07:00 UTC
+  workflow_dispatch:
+    inputs:
+      path:
+        description: "File or directory to scan"
+        default: "."
+      fail_on:
+        description: "Fail the run if a finding is at or above this severity (blank = never fail)"
+        default: ""
+        type: choice
+        options: ["", "critical", "high", "medium", "low"]
+
+permissions:
+  contents: read
+  security-events: write          # upload SARIF to code scanning
+
+concurrency:
+  group: source-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install Deluluscan
+        run: pip install -e .
+
+      - name: Scan source (SAST + secrets) → SARIF
+        env:
+          SCAN_PATH: ${{ github.event.inputs.path || '.' }}
+          FAIL_ON: ${{ github.event.inputs.fail_on || '' }}
+        run: |
+          args=(--path "$SCAN_PATH" --sarif sarif-out)
+          if [ -n "$FAIL_ON" ]; then args+=(--fail-on "$FAIL_ON"); fi
+          python3 -m deluluscan.sast "${args[@]}"
+
+      - name: Upload SARIF to code scanning
+        if: always()
+        continue-on-error: true   # don't fail the run if code scanning isn't enabled
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-out/results.sarif
+          category: deluluscan-sast
+
+      - name: Upload SARIF artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: deluluscan-sarif
+          path: sarif-out/results.sarif
+          if-no-files-found: warn

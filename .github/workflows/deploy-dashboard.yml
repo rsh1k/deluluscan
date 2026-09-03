@@ -1,20 +1,21 @@
 name: Deploy dashboard (SSO)
 
-# Rebuilds the Deluluscan dashboard image and pushes it to ECR, then rolls the EKS
-# deployment behind Google SSO (see deploy/dashboard/). Mirrors dotusage's
-# AWS-OIDC -> ECR flow, but uses Deluluscan's OWN IAM role — never dotusage's.
+# OPTIONAL, self-hosted deployment example: rebuild the Deluluscan dashboard image,
+# push it to Amazon ECR, and roll an EKS deployment (see deploy/dashboard/). This is
+# a template for teams who host the dashboard on their own AWS account — it is fully
+# parameterised by the repo variables below and authenticates via GitHub OIDC (no
+# stored AWS keys). It ships disabled and is not required to use Deluluscan.
 #
-# Left as workflow_dispatch + workflow_call (no schedule) so it CANNOT fire until
-# the platform team provisions the role and sets the repo vars below — matching
-# the deliberately-disabled nightly-scan. Once configured, the nightly scan can
-# `uses:` this to refresh the SSO dashboard after each run, or run it manually.
+# workflow_dispatch + workflow_call only (no schedule), and the job is a no-op until
+# AWS_DEPLOY_ROLE_ARN is set, so an unconfigured fork never runs a doomed job. Adapt
+# the steps to your own registry/orchestrator if you don't use ECR/EKS.
 #
-# Required repo vars (Settings -> Secrets and variables -> Actions -> Variables),
-# all provisioned by the platform team for THIS repo (a deluluscan-github-actions role
-# trusting the target/deluluscan, an ECR repo, and EKS access):
+# Required repo variables (Settings -> Secrets and variables -> Actions -> Variables),
+# pointing at your OWN AWS account (an IAM role whose trust policy allows this repo,
+# an ECR repository, and EKS access):
 #   AWS_DEPLOY_ROLE_ARN  e.g. arn:aws:iam::<acct>:role/deluluscan-github-actions
 #   ECR_DASHBOARD_REPO   e.g. <acct>.dkr.ecr.us-east-1.amazonaws.com/deluluscan/dashboard
-#   EKS_CLUSTER_NAME     the corp cluster name (for aws eks update-kubeconfig)
+#   EKS_CLUSTER_NAME     your cluster name (for aws eks update-kubeconfig)
 #   AWS_REGION           optional; defaults to us-east-1
 
 on:
@@ -38,8 +39,8 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    # No-op until the platform team wires the deploy role, so an unconfigured repo
-    # never runs a doomed job.
+    # No-op until the deploy role is configured, so an unconfigured fork never
+    # runs a doomed job.
     if: ${{ vars.AWS_DEPLOY_ROLE_ARN != '' }}
     permissions:
       id-token: write        # OIDC -> AWS STS
