@@ -223,6 +223,15 @@ via `--mantis-findings-dir` when the corpus exists.
   gated. CLI: `python3 -m deluluscan.crawler --url …` (needs `pip install playwright
   && playwright install chromium`; extra: `pip install deluluscan[crawler]`).
   Opt-in assess module (`--crawl`, fail-soft). `tests/test_crawler.py`.
+- `deluluscan/protopollution/` — CLIENT-side prototype pollution (complements the
+  server-side check in `scanners/injection_scanner.py`): `payloads.py` (6 URL
+  vectors — query/hash `__proto__[k]`/`__proto__.k`/`constructor[prototype][k]`,
+  each with a unique marker), `engine.py` (`ProtoPollutionScan`: for each vector,
+  a `probe(full_url, marker)` renders the page and checks whether
+  `Object.prototype[marker]` actually got set in the live DOM → HIGH MISCONFIG,
+  DOM-XSS precursor). Probe injected → offline-testable; default drives Playwright
+  (optional dep, fail-soft). Active, scope-gated. CLI:
+  `python3 -m deluluscan.protopollution --url …`. `tests/test_protopollution.py`.
 - `deluluscan/platforms/` — platform intelligence (know what the target *is*):
   `profiles.py` (data-driven `PlatformProfile`s — WordPress/Drupal/Joomla/Ghost +
   AWS/GCP/Azure hosting — each carrying fingerprint `Signal`s, API base+style, auth
