@@ -352,6 +352,14 @@ via `--mantis-findings-dir` when the corpus exists.
   RubyGems and FAILS SOFT so `None`/unknown is never flagged). CLI:
   `python3 -m deluluscan.depconfusion --path ./`. Opt-in assess module
   (`--depconfusion`, runs on `--sast-path`). `tests/test_depconfusion.py`.
+- `deluluscan/githistory/` — secret scanning across git HISTORY (catches secrets
+  removed from HEAD but still reachable via old commits): `engine.py`
+  (`GitSecretScan.scan_repo`: enumerate every history blob, run `secrets.scan_text`,
+  de-dup per unique secret with the paths it appears in; each finding says ROTATE
+  — deleting from HEAD doesn't invalidate the credential). Git access injected
+  (`list_blobs`/`read_blob`) → offline-testable; defaults shell out to `git`
+  read-only; binary/huge blobs skipped, bounded by `max_blobs`. CLI:
+  `python3 -m deluluscan.githistory --repo .`. `tests/test_githistory.py`.
 - `deluluscan/telemetry/` — grey-box observability plane (`--observe`): `sources.py`
   (fail-soft `DockerLogSource`/`DockerStatsSource`, tap the target container's
   logs/mem/CPU — no agent inside it), `recorder.py` (`Recorder`: thread-safe,
