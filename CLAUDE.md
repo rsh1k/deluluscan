@@ -191,6 +191,16 @@ via `--mantis-findings-dir` when the corpus exists.
   canary-based OWASP LLM Top 10 corpus incl. multi-turn crescendo), `engine.py`
   (reproduction-gated, evidence-first grading). CLI: `python3 -m deluluscan.llm`.
   `tests/test_llm_pentest.py`.
+- `deluluscan/mcp/` — MCP (Model Context Protocol) tool-poisoning analyzer: the
+  tool `description` field is an unsanitized prompt-injection surface, so a
+  malicious/compromised MCP server can embed instructions the agent follows.
+  `patterns.py` (rules for prompt-override, hide-from-user, secret-exfiltration,
+  external-exfil, mandatory-preamble, tool-shadowing, fake-system + hidden-unicode/
+  HTML-comment concealment, dangerous-capability, sensitive-param), `analyzer.py`
+  (`analyze_tools(tools)` → Findings, mostly `ai_llm`), `engine.py` (`McpScan`:
+  accepts a raw tools list / `{tools:[…]}` / JSON-RPC `tools/list`; `scan_file`,
+  `scan_live(fetch)`). Static, detection only, offline. CLI:
+  `python3 -m deluluscan.mcp --manifest tools.json`. `tests/test_mcp.py`.
 - `deluluscan/recon/` — advanced reconnaissance: `signatures.py` (web/JS-lib
   fingerprints + known-vulnerable-library rules + content wordlists), `engine.py`
   (ReconEngine → web fingerprint, crt.sh subdomains, content discovery → ReconProfile
