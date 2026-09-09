@@ -6,7 +6,7 @@ web, API, application, container/Kubernetes, cloud, and **LLM/AI-system** target
 [![PyPI](https://img.shields.io/pypi/v/deluluscan.svg)](https://pypi.org/project/deluluscan/)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-73_suites_green-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-81_suites_green-brightgreen.svg)](tests/)
 [![Local AI](https://img.shields.io/badge/AI-Claude%20%7C%20OpenAI%20%7C%20DeepSeek%20%7C%20Ollama-8a2be2.svg)](docs/LOCAL_MODELS.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -97,6 +97,9 @@ for running a model on a low-RAM / WSL / non-NVIDIA machine.
 | **Edge / network recon** | `netscan/` | WAF/CDN/proxy detection (**18 vendors**, wafw00f-style passive+active), TCP port/service scan + banner grab, **TLS/SSL config** (deprecated protocols, weak/expired/mismatched certs, no-PFS), honeypot heuristics, IDS/IPS inference, **SMB/LDAP posture** (signing, SMBv1, anonymous bind). |
 | **OSINT & takeover** | `recon/` | DNS/email intel (**SPF/DMARC/AXFR** + email harvest), **subdomain-takeover** fingerprints (14 providers, CNAME-corroborated). |
 | **Prioritization** | `epss/`,`kev/`,`priority/`,`attack/` | Ranks findings by real-world risk: **EPSS** exploit probability, **CISA KEV** (confirmed exploited), a combined **0–100 priority score**, and **MITRE ATT&CK** technique tagging. |
+| **Supply chain** | `depconfusion/`,`githistory/`,`subresource/` | **Dependency confusion** (packages unclaimed on the public registry), **secrets in git history** (reachable via old commits), **missing Subresource Integrity** on cross-origin CDN scripts. |
+| **AI / MCP** | `llm/`,`mcp/` | OWASP LLM Top 10 pentest, and **MCP tool-poisoning** analysis (prompt-injection / exfiltration / concealment in Model-Context-Protocol tool descriptions). |
+| **Client-side & crypto** | `csp.py`,`protopollution/`,`jwtaudit/` | **CSP bypass analysis** (Google-CSP-Evaluator-style), **client-side prototype pollution** (live-DOM proof), **offline JWT audit** with HS256 weak-secret cracking. |
 | **Passive analysis** | `passive/` | ZAP-style, no extra requests — stack traces / SQL errors, debug consoles (Werkzeug/Whoops/Django), directory listing, internal-IP & secrets-in-URL, HTML-comment leaks. Runs over every collected response. |
 | **Dynamic crawl** | `crawler/` | Optional headless-browser (Playwright) AJAX-spider: renders JS-heavy apps and captures the API calls the client actually makes — the dynamic surface a static parse can't resolve. |
 | **HTTP hardening** | `headers/` | Security headers, CORS (wildcard / reflected-origin-with-credentials), cookie flags. |
