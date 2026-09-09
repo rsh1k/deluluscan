@@ -201,6 +201,18 @@ def test_attack_tagging_always_on():
           tagged and all(k in tagged[0].detail["attack"][0] for k in ("id", "tactic", "url")))
 
 
+def test_depconfusion_optin_on_sast_path():
+    import tempfile, os
+    with tempfile.TemporaryDirectory() as d:
+        open(os.path.join(d, "requirements.txt"), "w").write("internal-pkg==1.0\nrequests>=2\n")
+        a = run_web_assessment("http://t/", modules=[], sast_path=d,
+                               depconfusion=True,
+                               depconfusion_check=lambda eco, name: {"internal-pkg": False, "requests": True}.get(name))
+        titles = [f.title for f in a.findings]
+        check("depconfusion finding merged", any("Dependency confusion" in t for t in titles), titles)
+        check("depconfusion module recorded", "depconfusion" in a.modules_run, a.modules_run)
+
+
 def test_assess_includes_sast_and_apispec():
     import tempfile, json as _json
     d = tempfile.mkdtemp()

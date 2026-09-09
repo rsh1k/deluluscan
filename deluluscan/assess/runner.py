@@ -88,7 +88,8 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
                        adintel_smb_probe: Optional[Callable] = None,
                        adintel_ldap_probe: Optional[Callable] = None,
                        epss: bool = False, epss_fetch: Optional[Callable] = None,
-                       kev: bool = False, kev_fetch: Optional[Callable] = None) -> Assessment:
+                       kev: bool = False, kev_fetch: Optional[Callable] = None,
+                       depconfusion: bool = False, depconfusion_check: Optional[Callable] = None) -> Assessment:
     """Live-run the web-facing modules and merge. recon auto-folds platform
     intelligence + version-gated CVEs + passive edge detection + TLS/DNS/subdomain-
     takeover; netscan adds active WAF/CDN + honeypot + IDS/IPS + TLS (+ ports when
@@ -190,6 +191,15 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
     if sast_path:
         from ..sast import SastScan
         a.add(SastScan().scan_path(sast_path), "sast")
+        # dependency-confusion runs on the same source tree; it makes registry
+        # lookups, so it's opt-in (depconfusion=True) and fail-soft.
+        if depconfusion:
+            try:
+                from ..depconfusion import DepConfusionScan
+                a.add(DepConfusionScan(registry_check=depconfusion_check).scan_path(sast_path),
+                      "depconfusion")
+            except Exception:
+                a.modules_run.append("depconfusion")
     if spec_path:
         from ..apispec import ApiSpecScan
         a.add(ApiSpecScan().scan_file(spec_path), "apispec")

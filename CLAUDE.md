@@ -323,6 +323,16 @@ via `--mantis-findings-dir` when the corpus exists.
   `attach_attack(findings)` sets `detail["attack"]=[{tactic,id,name,url}]`. Runs
   ALWAYS in the assess pipeline (pure data, no network). Dashboard shows ATT&CK
   pills on the finding drawer. `tests/test_attack.py`.
+- `deluluscan/depconfusion/` — dependency-confusion / namespace-squatting detection
+  (Alex Birsan class): `parsers.py` (dependency-free manifest + private-registry-config
+  parsers — package.json/requirements.txt/pyproject/composer.json/Gemfile, and
+  .npmrc/pip.conf/.yarnrc/pyproject private-source markers), `engine.py`
+  (`DepConfusionScan`: a declared package ABSENT from its public registry is a
+  confusion candidate — HIGH when a private registry is configured, else MEDIUM;
+  registry lookup injected → offline-testable, default queries npm/PyPI/Packagist/
+  RubyGems and FAILS SOFT so `None`/unknown is never flagged). CLI:
+  `python3 -m deluluscan.depconfusion --path ./`. Opt-in assess module
+  (`--depconfusion`, runs on `--sast-path`). `tests/test_depconfusion.py`.
 - `deluluscan/telemetry/` — grey-box observability plane (`--observe`): `sources.py`
   (fail-soft `DockerLogSource`/`DockerStatsSource`, tap the target container's
   logs/mem/CPU — no agent inside it), `recorder.py` (`Recorder`: thread-safe,
