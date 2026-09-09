@@ -305,7 +305,12 @@ via `--mantis-findings-dir` when the corpus exists.
 - `deluluscan/headers/` — HTTP security-header / CORS / cookie analysis: `analyzer.py`
   (CSP/HSTS/nosniff/clickjacking/referrer, CORS wildcard+reflected-origin-with-credentials,
   insecure cookie flags, version disclosure), `engine.py` (`HeaderScan` + CORS reflection
-  probe). CLI: `python3 -m deluluscan.headers --url`. `tests/test_headers.py`.
+  probe). CLI: `python3 -m deluluscan.headers --url`. `tests/test_headers.py`. Deep CSP
+  effectiveness analysis lives in `deluluscan/csp.py` (`analyze_csp` — Google-CSP-
+  Evaluator-style: unsafe-inline not neutralised by nonce/hash/strict-dynamic,
+  wildcard/scheme/`data:` script sources, JSONP/Angular bypassable-CDN allowlisting,
+  missing object-src/base-uri, report-only downgrade) and is auto-run by the headers
+  module on any CSP header. `tests/test_csp.py`.
 - `deluluscan/memory.py` — engagement memory (cross-scan learning store): `EngagementMemory`
   (JSON, per-target `record_scan`/`recall`/`save`), `Recall`, `target_key_from_fingerprint`.
   Wired into the orchestrator (recall after fingerprint → prioritize → annotate →

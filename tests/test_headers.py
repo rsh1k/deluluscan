@@ -21,7 +21,8 @@ def test_insecure_response_flags_everything():
 
 def test_hardened_response_is_clean():
     h = {"content-type": "text/html",
-         "content-security-policy": "default-src 'self'; frame-ancestors 'none'",
+         "content-security-policy": "default-src 'self'; script-src 'self'; object-src 'none'; "
+                                    "base-uri 'none'; frame-ancestors 'none'",
          "strict-transport-security": "max-age=31536000; includeSubDomains",
          "x-content-type-options": "nosniff", "referrer-policy": "no-referrer",
          "set-cookie": "SID=x; Secure; HttpOnly; SameSite=Lax"}

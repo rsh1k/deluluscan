@@ -37,16 +37,17 @@ def check_security_headers(headers: dict, url: str) -> list:
     ctype = h.get("content-type", "")
     is_html = "text/html" in ctype or ctype == ""
 
-    if is_html and "content-security-policy" not in h:
+    if is_html and "content-security-policy" not in h and "content-security-policy-report-only" not in h:
         out.append(_f(VulnClass.MISCONFIG, "medium", "Missing Content-Security-Policy", url,
             "No CSP header — the primary defense-in-depth control against XSS/data-injection is absent.",
             {"header": "content-security-policy", "rule": "hdr-csp"}))
     else:
-        csp = h.get("content-security-policy", "")
-        if "unsafe-inline" in csp or "unsafe-eval" in csp:
-            out.append(_f(VulnClass.MISCONFIG, "low", "Weak CSP (unsafe-inline/unsafe-eval)", url,
-                "CSP permits unsafe-inline/unsafe-eval, largely defeating its XSS protection.",
-                {"rule": "hdr-csp-weak"}))
+        # deep CSP effectiveness analysis (Google-CSP-Evaluator-style bypass checks)
+        from ..csp import analyze_csp
+        if h.get("content-security-policy"):
+            out.extend(analyze_csp(h["content-security-policy"], url, report_only=False))
+        elif h.get("content-security-policy-report-only"):
+            out.extend(analyze_csp(h["content-security-policy-report-only"], url, report_only=True))
 
     hsts = h.get("strict-transport-security", "")
     if url.startswith("https") and not hsts:
