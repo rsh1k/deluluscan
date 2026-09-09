@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the Deluluscan dashboard image and push it to ECR, then roll the deployment.
-# Mirrors a peer service's manual-deploy flow. Requires: docker, awscli, kubectl access
+# Manual build/push/deploy flow. Requires: docker, awscli, kubectl access
 # to the corp cluster, and push access to the ECR repo (see README "Access needed").
 #
 # Usage:

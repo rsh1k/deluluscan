@@ -6,7 +6,7 @@ contents of process memory — tokens, passwords, session state — or a live vi
 of internals. This scanner probes a fixed, bounded set of well-known surfaces
 for reachability by an ANONYMOUS caller.
 
-False-positive discipline: a bare 200 is NOT proof. the target/a peer service-style SPAs
+False-positive discipline: a bare 200 is NOT proof. SPAs commonly
 answer 200 with index.html for unknown paths, so every probe must match a
 CONTENT marker specific to the artifact (hprof magic / octet-stream for a heap
 dump, actuator's `_links`, a thread-state dump, `propertySources` for env, …) and

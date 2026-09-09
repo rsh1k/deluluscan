@@ -1,6 +1,6 @@
 # ALB ingress that GATES the dashboard behind Google SSO.
 #
-# Unlike a peer service (which does Google OAuth inside its app), the dashboard is a
+# Because the dashboard is a static file (no app to own login), the dashboard is a
 # static file with no app — so authentication is enforced at the ALB via OIDC:
 # an unauthenticated request is redirected to Google login and only reaches nginx
 # after a successful sign-in. This is the least-code way to put a static site
@@ -15,9 +15,9 @@ metadata:
   name: deluluscan-dashboard-alb
   namespace: deluluscan
   labels:
-    example.com/tenant: deluluscan
-    example.com/project: security-dashboard
-    example.com/environment: prod
+    app.kubernetes.io/tenant: deluluscan
+    app.kubernetes.io/project: security-dashboard
+    app.kubernetes.io/environment: prod
   annotations:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
@@ -31,7 +31,7 @@ metadata:
     # TODO(platform): ACM cert for dashboard.example.com (or the *.example.com wildcard)
     alb.ingress.kubernetes.io/certificate-arn: "<ACM_CERT_ARN>"
     alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-FS-1-2-Res-2020-10
-    # OPTIONAL: same IP-allowlist SG pattern a peer service uses, for network-layer defence-in-depth.
+    # OPTIONAL: add an IP-allowlist SG on the ALB for network-layer defence-in-depth.
     # alb.ingress.kubernetes.io/security-groups: "<ALB_SG_ID>"
     #
     # ---- Google SSO (OIDC) -------------------------------------------------

@@ -12,12 +12,11 @@ metadata:
   labels:
     app: deluluscan-dashboard
     fullname: deluluscan-security-dashboard
-    example.com/provider: aws
-    example.com/scope: corp
-    example.com/tenant: deluluscan
-    example.com/project: security-dashboard
-    example.com/environment: prod
-    example.com/region: us-east-1
+    app.kubernetes.io/provider: aws
+    app.kubernetes.io/tenant: deluluscan
+    app.kubernetes.io/project: security-dashboard
+    app.kubernetes.io/environment: prod
+    app.kubernetes.io/region: us-east-1
 spec:
   replicas: 1
   revisionHistoryLimit: 3
@@ -29,9 +28,9 @@ spec:
       labels:
         app: deluluscan-dashboard
         fullname: deluluscan-security-dashboard
-        example.com/tenant: deluluscan
-        example.com/project: security-dashboard
-        example.com/environment: prod
+        app.kubernetes.io/tenant: deluluscan
+        app.kubernetes.io/project: security-dashboard
+        app.kubernetes.io/environment: prod
     spec:
       serviceAccountName: deluluscan-dashboard-sa
       containers:
