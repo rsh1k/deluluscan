@@ -69,6 +69,13 @@ class PassiveScan:
                 out.extend(find_and_audit(body, source=url))
             except Exception:
                 pass
+        # SRI + mixed-content over the captured HTML (supply-chain / downgrade)
+        if body and "<" in body:
+            try:
+                from ..subresource import analyze_resources
+                out.extend(analyze_resources(url, body))
+            except Exception:
+                pass
         return out
 
     def analyze_record(self, rec: RequestRecord, **kw) -> list:

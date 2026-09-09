@@ -279,6 +279,10 @@ via `--mantis-findings-dir` when the corpus exists.
   Wired two ways: (1) `deluluscan/assess/runner.py` runs it as a `passive` module;
   (2) the in-scan `scanners/passive.py` `PassiveScanner` folds these body rules over
   every collected response during a full orchestrator scan (deduped once per rule).
+  `PassiveScan.analyze` also auto-runs `jwtaudit` on any JWT in the body and
+  `deluluscan/subresource.py` (`analyze_resources` — missing Subresource Integrity
+  on cross-origin `<script>`/`<link>` → supply-chain XSS; active/passive mixed
+  content on an HTTPS page → CWE-311) on any HTML. `tests/test_subresource.py`.
 - `deluluscan/agentic/` — exploitation-chain agent (WS-2): `capabilities.py`
   (allowlisted safe primitives via injected toolbox), `agent.py` (`ExploitChainAgent`:
   bounded observe->act->verify loop, step budget, state-changing opt-in + approval gate,
