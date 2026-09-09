@@ -61,6 +61,14 @@ class PassiveScan:
         if include_secrets and body:
             from ..secrets.scanner import scan_text
             out.extend(scan_text(body, source=url))
+        # audit any JWT that appears in the response (crackable HS* keys, alg:none,
+        # sensitive claims) — offline, cheap, runs over the captured body for free
+        if body and "eyJ" in body:
+            try:
+                from ..jwtaudit.audit import find_and_audit
+                out.extend(find_and_audit(body, source=url))
+            except Exception:
+                pass
         return out
 
     def analyze_record(self, rec: RequestRecord, **kw) -> list:

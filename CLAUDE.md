@@ -357,6 +357,14 @@ via `--mantis-findings-dir` when the corpus exists.
   RubyGems and FAILS SOFT so `None`/unknown is never flagged). CLI:
   `python3 -m deluluscan.depconfusion --path ./`. Opt-in assess module
   (`--depconfusion`, runs on `--sast-path`). `tests/test_depconfusion.py`.
+- `deluluscan/jwtaudit/` — OFFLINE JWT audit (complements the active `jwt` scanner
+  that needs a live oracle): `audit.py` (`audit_token`/`find_and_audit` — decode +
+  flag alg:none, **offline HS256/384/512 weak-secret cracking** via HMAC recompute
+  against a curated common-secrets list (`secrets_list.py`), missing/excessive exp,
+  sensitive claims (password/ssn/…), kid injection metacharacters, jku/x5u SSRF).
+  Stdlib only, fully offline. CLI: `python3 -m deluluscan.jwtaudit --token … | --file
+  … | --stdin`. Auto-run by `passive/engine.py` on any response body containing a
+  JWT (cracks tokens for free). `tests/test_jwtaudit.py`.
 - `deluluscan/githistory/` — secret scanning across git HISTORY (catches secrets
   removed from HEAD but still reachable via old commits): `engine.py`
   (`GitSecretScan.scan_repo`: enumerate every history blob, run `secrets.scan_text`,
