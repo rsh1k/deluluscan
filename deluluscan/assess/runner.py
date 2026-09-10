@@ -74,6 +74,7 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
                        modules: Optional[list] = None,
                        sast_path: Optional[str] = None,
                        spec_path: Optional[str] = None,
+                       sbom_path: Optional[str] = None,
                        netscan_ports: bool = False,
                        crawl_max_pages: int = 40,
                        recon_fetch: Optional[Callable] = None,
@@ -216,6 +217,9 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
     if spec_path:
         from ..apispec import ApiSpecScan
         a.add(ApiSpecScan().scan_file(spec_path), "apispec")
+    if sbom_path:
+        from ..sbom import SbomScan
+        a.add(SbomScan().scan_file(sbom_path), "sbom")
 
     # Prioritization: OPT-IN enrichment. EPSS (exploit probability, FIRST.org) and
     # KEV (confirmed exploited, CISA) rank CVE findings by real-world risk; a

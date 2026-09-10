@@ -30,6 +30,7 @@ def main(argv=None):
     p.add_argument("--graphql", help="GraphQL endpoint URL to include")
     p.add_argument("--sast-path", help="source tree/file to SAST-scan and include")
     p.add_argument("--spec", help="OpenAPI/Swagger spec file to security-lint and include")
+    p.add_argument("--sbom", help="CycloneDX/SPDX SBOM file to analyze and include")
     p.add_argument("--modules", help="comma list: recon,headers,secrets,netscan,passive,webapi "
                                      "(default: all applicable)")
     p.add_argument("--netscan-ports", action="store_true",
@@ -63,7 +64,7 @@ def main(argv=None):
                     + (["webapi"] if a.graphql else []))
         mods = mods + [m for m in optin if m not in mods]
     assessment = run_web_assessment(a.url, domain=a.domain, graphql_url=a.graphql, modules=mods,
-                                    sast_path=a.sast_path, spec_path=a.spec,
+                                    sast_path=a.sast_path, spec_path=a.spec, sbom_path=a.sbom,
                                     netscan_ports=a.netscan_ports, epss=a.epss, kev=a.kev,
                                     depconfusion=a.depconfusion)
     payload = assessment.payload()

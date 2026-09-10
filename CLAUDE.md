@@ -305,6 +305,16 @@ via `--mantis-findings-dir` when the corpus exists.
   docker-socket escape, caps, root, secrets, unpinned), `engine.py` (`ContainerScan`:
   dir auto-detect + exposed-control-plane probe). CLI: `python3 -m deluluscan.container`.
   `tests/test_container.py`.
+- `deluluscan/sbom/` — SBOM analysis (CycloneDX + SPDX JSON): `parse.py`
+  (`parse_sbom`/`detect_format` → normalized `Component`s with purl-ecosystem +
+  integrity-hash + supplier), `known_vulns.py` (curated marquee supply-chain CVEs —
+  Log4Shell, Spring4Shell, Text4Shell, commons-collections, ejs, pyyaml, …),
+  `analyzer.py` (`analyze_components`: cross-ref each component against the known-
+  vuln list via `platforms.cves.version_in_range` → SUPPLY_CHAIN finding at the CVE
+  severity; plus SBOM-quality gaps — components missing version, aggregate missing-
+  hash, empty SBOM). `engine.py` (`SbomScan`: only analyzes recognized CycloneDX/
+  SPDX, never a random JSON). CLI: `python3 -m deluluscan.sbom --file bom.json`.
+  Assess: `--sbom`. `tests/test_sbom.py`.
 - `deluluscan/iac/` — cloud IaC static analysis (Terraform + CloudFormation;
   complements `container/`'s Dockerfile/K8s/compose): `terraform.py`
   (`analyze_terraform` — brace-matched HCL resource blocks: public S3 ACL / disabled
