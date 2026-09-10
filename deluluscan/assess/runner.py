@@ -191,6 +191,13 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
     if sast_path:
         from ..sast import SastScan
         a.add(SastScan().scan_path(sast_path), "sast")
+        # cloud IaC misconfig scan over the same tree (offline, static) — Terraform +
+        # CloudFormation, alongside the Dockerfile/K8s checks in container/.
+        try:
+            from ..iac import IacScan
+            a.add(IacScan().scan_path(sast_path), "iac")
+        except Exception:
+            pass
         # dependency-confusion runs on the same source tree; it makes registry
         # lookups, so it's opt-in (depconfusion=True) and fail-soft.
         if depconfusion:

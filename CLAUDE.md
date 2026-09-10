@@ -293,6 +293,16 @@ via `--mantis-findings-dir` when the corpus exists.
   docker-socket escape, caps, root, secrets, unpinned), `engine.py` (`ContainerScan`:
   dir auto-detect + exposed-control-plane probe). CLI: `python3 -m deluluscan.container`.
   `tests/test_container.py`.
+- `deluluscan/iac/` — cloud IaC static analysis (Terraform + CloudFormation;
+  complements `container/`'s Dockerfile/K8s/compose): `terraform.py`
+  (`analyze_terraform` — brace-matched HCL resource blocks: public S3 ACL / disabled
+  public-access-block, security groups open to 0.0.0.0/0 (HIGH on SSH/RDP/DB ports),
+  unencrypted/public RDS·EBS·DynamoDB, IMDSv1 allowed, wildcard IAM Action:*, hardcoded
+  secrets), `cloudformation.py` (`analyze_cloudformation` — structured YAML/JSON with a
+  loader tolerant of `!Ref`/`!Sub` intrinsics; same rule set), `engine.py` (`IacScan`:
+  walk a tree, auto-detect `.tf` vs CFN by `AWSTemplateFormatVersion`/`AWS::` types so
+  K8s YAML isn't misread). Static, offline. CLI: `python3 -m deluluscan.iac --path
+  ./infra`. Auto-run by the assess pipeline on `--sast-path`. `tests/test_iac.py`.
 - `deluluscan/cloud/` — cloud posture/CSPM (WS-5): `checks.py` (AWS/GCP/Azure
   inventory checks — public storage, open SGs, over-permissive IAM, root keys,
   unencrypted/public DBs, no CloudTrail), `imds.py` (SSRF->metadata->credential
