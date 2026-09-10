@@ -201,6 +201,18 @@ via `--mantis-findings-dir` when the corpus exists.
   accepts a raw tools list / `{tools:[…]}` / JSON-RPC `tools/list`; `scan_file`,
   `scan_live(fetch)`). Static, detection only, offline. CLI:
   `python3 -m deluluscan.mcp --manifest tools.json`. `tests/test_mcp.py`.
+- `deluluscan/agentaudit/` — OWASP Top 10 for Agentic Applications (2026) static
+  config audit: `analyzer.py` (`analyze_agent(cfg)` — tolerant extraction of an
+  agent's tools/autonomy/memory/identity/guardrails from any config shape, then
+  checks: excessive agency (high-impact tools + no human-in-the-loop → HIGH),
+  unbounded autonomy (no step/budget limit), memory/RAG poisoning (untrusted
+  sources unsanitised → HIGH goal-hijacking surface), over-privileged identity
+  (admin/wildcard scopes → HIGH authz), hardcoded config secrets, missing audit
+  trail, and cross-links the `mcp` tool-poisoning analyzer over the agent's tools),
+  `engine.py` (`AgentAudit`: single agent / list / `{agents:[…]}`, JSON or YAML).
+  A well-governed agent (HITL + bounded + sanitised memory + scoped identity +
+  logging) yields zero findings. Static, offline. CLI:
+  `python3 -m deluluscan.agentaudit --config agent.json`. `tests/test_agentaudit.py`.
 - `deluluscan/recon/` — advanced reconnaissance: `signatures.py` (web/JS-lib
   fingerprints + known-vulnerable-library rules + content wordlists), `engine.py`
   (ReconEngine → web fingerprint, crt.sh subdomains, content discovery → ReconProfile
