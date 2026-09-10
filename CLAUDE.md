@@ -315,6 +315,16 @@ via `--mantis-findings-dir` when the corpus exists.
   walk a tree, auto-detect `.tf` vs CFN by `AWSTemplateFormatVersion`/`AWS::` types so
   K8s YAML isn't misread). Static, offline. CLI: `python3 -m deluluscan.iac --path
   ./infra`. Auto-run by the assess pipeline on `--sast-path`. `tests/test_iac.py`.
+- `deluluscan/cicd/` — CI/CD pipeline security (GitHub Actions): `github_actions.py`
+  (`analyze_workflow` — script injection via untrusted `${{ github.event.* }}`/
+  `github.head_ref` in `run:` steps (CWE-94, HIGH), "pwn request" =
+  pull_request_target/workflow_run that checks out untrusted PR code with the base
+  token (CWE-668, HIGH), unpinned actions not pinned to a 40-char SHA (supply_chain;
+  MEDIUM third-party / LOW first-party), `permissions: write-all`, and curl|bash
+  pipe-to-shell), `engine.py` (`CicdScan`: walk `.github/workflows/*.yml`). PyYAML;
+  handles the `on:`→`True` key quirk. Static, offline. CLI: `python3 -m
+  deluluscan.cicd --path .`. Auto-run by the assess pipeline on `--sast-path`.
+  `tests/test_cicd.py`.
 - `deluluscan/cloud/` — cloud posture/CSPM (WS-5): `checks.py` (AWS/GCP/Azure
   inventory checks — public storage, open SGs, over-permissive IAM, root keys,
   unencrypted/public DBs, no CloudTrail), `imds.py` (SSRF->metadata->credential

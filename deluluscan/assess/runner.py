@@ -198,6 +198,12 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
             a.add(IacScan().scan_path(sast_path), "iac")
         except Exception:
             pass
+        # CI/CD pipeline security (.github/workflows) — static, offline
+        try:
+            from ..cicd import CicdScan
+            a.add(CicdScan().scan_path(sast_path), "cicd")
+        except Exception:
+            pass
         # dependency-confusion runs on the same source tree; it makes registry
         # lookups, so it's opt-in (depconfusion=True) and fail-soft.
         if depconfusion:
