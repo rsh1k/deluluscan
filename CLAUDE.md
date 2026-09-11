@@ -305,6 +305,15 @@ via `--mantis-findings-dir` when the corpus exists.
   docker-socket escape, caps, root, secrets, unpinned), `engine.py` (`ContainerScan`:
   dir auto-detect + exposed-control-plane probe). CLI: `python3 -m deluluscan.container`.
   `tests/test_container.py`.
+- `deluluscan/k8srbac/` — Kubernetes RBAC analysis (the access-control layer the
+  pod-spec checks don't touch): `analyzer.py` (`analyze_rbac(docs)` — wildcard
+  Role/ClusterRole verbs+resources (CRITICAL cluster / HIGH namespaced), the
+  privilege-escalation verbs escalate/bind/impersonate, cluster-wide secret read,
+  pod create/exec = cluster RCE, and dangerous bindings — cluster-admin, or any
+  role bound to anonymous/all-authenticated subjects → CRITICAL/HIGH `authz`),
+  `engine.py` (`K8sRbacScan`). Static, offline. CLI: `python3 -m deluluscan.k8srbac
+  --path ./k8s`. Also folded into the container scan's K8s path so a normal
+  container scan surfaces RBAC alongside workload misconfigs. `tests/test_k8srbac.py`.
 - `deluluscan/sbom/` — SBOM analysis (CycloneDX + SPDX JSON): `parse.py`
   (`parse_sbom`/`detect_format` → normalized `Component`s with purl-ecosystem +
   integrity-hash + supplier), `known_vulns.py` (curated marquee supply-chain CVEs —

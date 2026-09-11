@@ -47,11 +47,21 @@ class ContainerScan:
                 return []
         if kind == "k8s":
             try:
-                docs = [d for d in yaml.safe_load_all(text)
-                        if isinstance(d, dict) and (d.get("kind") or "").lower() in _K8S_KINDS]
+                all_docs = [d for d in yaml.safe_load_all(text) if isinstance(d, dict)]
             except Exception:
                 return []
-            return analyze_k8s(docs, name)
+            docs = [d for d in all_docs if (d.get("kind") or "").lower() in _K8S_KINDS]
+            out = analyze_k8s(docs, name)
+            # also analyze RBAC objects (Roles/ClusterRoles/Bindings), which the
+            # workload-focused analyzer above filters out.
+            try:
+                from ..k8srbac.analyzer import analyze_rbac, RBAC_KINDS
+                rbac_docs = [d for d in all_docs if (d.get("kind") or "").lower() in RBAC_KINDS]
+                if rbac_docs:
+                    out = out + analyze_rbac(rbac_docs, name)
+            except Exception:
+                pass
+            return out
         return []
 
     def _classify(self, fname: str) -> Optional[str]:
