@@ -114,6 +114,15 @@ via `--mantis-findings-dir` when the corpus exists.
   only, no publishing). CLI: `python3 -m deluluscan.assess --url … [--sast-path ./src] [--spec openapi.json]
   --formats md,html,json` (merges live web + source SAST + API-spec findings).
   `tests/test_assess.py`.
+- `deluluscan/reposcan/` — ONE static DevSecOps pass over a whole repo, tying the
+  individual static analyzers together (no reimplementation — dispatches + merges):
+  `RepoScan.scan(path)` runs SAST + secrets, git-history secrets (if `.git`),
+  IaC (Terraform/CFN), containers/K8s (+RBAC via `container/`), CI/CD workflows, and
+  any SBOM auto-found in the tree; opt-in `depconfusion` (registry lookups). Merges +
+  dedups, then attaches ATT&CK tags + a priority score. Fail-soft per analyzer.
+  `payload()` → the standard report payload (works with `assess.report.write_reports`
+  → md/html/json/sarif/csv). CLI: `python3 -m deluluscan.reposcan --path .
+  [--formats …] [--depconfusion]`. `tests/test_reposcan.py`.
 - `deluluscan/sast/` — source-code SAST: `rules.py` (dangerous-pattern rules per
   language — eval/exec/os.system/shell, pickle/yaml/ObjectInputStream deser, SQL
   concat, weak crypto, XSS sinks, TLS verify=False), `engine.py` (`SastScan.scan_path`:
