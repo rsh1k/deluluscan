@@ -23,8 +23,16 @@ import sys
 import types
 
 from deluluscan.models import Endpoint, Finding, Severity, VulnClass
+import deluluscan.orchestrator as _orch_mod
 from deluluscan.orchestrator import Orchestrator
 from deluluscan.safety import DestructivePolicy
+
+# The destructive-pass "settle" logic uses real time.sleep() only to space out
+# HEALTH PROBES between destructive calls — and every test here stubs
+# _target_alive/_restart_target, so those probes never touch the network. The
+# sleeps therefore add pure wall-clock (~minute) and nothing else; no-op them so
+# the suite runs in well under a second. Production behaviour is unaffected.
+_orch_mod.time.sleep = lambda *a, **k: None
 
 _checks = 0
 _failures: list[str] = []
