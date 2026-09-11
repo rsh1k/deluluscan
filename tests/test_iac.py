@@ -47,6 +47,38 @@ def test_terraform_clean():
     check("hardened terraform -> no findings", analyze_terraform(tf, "ok.tf") == [], [x.title for x in analyze_terraform(tf, "ok.tf")])
 
 
+def test_terraform_gcp():
+    tf = ('resource "google_storage_bucket_iam_member" "p" { role = "roles/viewer" member = "allUsers" }\n'
+          'resource "google_compute_firewall" "fw" { source_ranges = ["0.0.0.0/0"] allow { ports = ["22"] } }\n'
+          'resource "google_sql_database_instance" "db" { authorized_networks { value = "0.0.0.0/0" } }\n')
+    r = rules(analyze_terraform(tf, "gcp.tf"))
+    check("gcp public bucket", "tf-gcp-public-bucket" in r, r)
+    check("gcp firewall open", "tf-gcp-fw-open" in r, r)
+    check("gcp public sql", "tf-gcp-sql-public" in r, r)
+    fw = next(x for x in analyze_terraform(tf, "gcp.tf") if x.detail["rule"] == "tf-gcp-fw-open")
+    check("gcp firewall on port 22 -> HIGH", fw.severity == Severity.HIGH, fw.severity)
+
+
+def test_terraform_azure():
+    tf = ('resource "azurerm_storage_container" "c" { container_access_type = "blob" }\n'
+          'resource "azurerm_network_security_rule" "r" { access = "Allow" source_address_prefix = "*" '
+          'destination_port_range = "3389" }\n'
+          'resource "azurerm_kubernetes_cluster" "aks" { role_based_access_control_enabled = false }\n'
+          'resource "azurerm_storage_account" "sa" { enable_https_traffic_only = false }\n')
+    r = rules(analyze_terraform(tf, "az.tf"))
+    check("azure public container", "tf-az-container-public" in r, r)
+    check("azure nsg open", "tf-az-nsg-open" in r, r)
+    check("azure aks no-rbac", "tf-az-aks-norbac" in r, r)
+    check("azure storage http", "tf-az-storage-http" in r, r)
+
+
+def test_gcp_azure_clean():
+    tf = ('resource "google_storage_bucket" "b" { uniform_bucket_level_access = true }\n'
+          'resource "azurerm_storage_container" "c" { container_access_type = "private" }\n')
+    check("hardened GCP/Azure -> no findings", analyze_terraform(tf, "ok.tf") == [],
+          [x.title for x in analyze_terraform(tf, "ok.tf")])
+
+
 def test_cloudformation_yaml_with_intrinsics():
     cfn = ("Resources:\n"
            "  D: { Type: AWS::S3::Bucket, Properties: { AccessControl: PublicRead } }\n"

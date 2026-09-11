@@ -329,7 +329,9 @@ via `--mantis-findings-dir` when the corpus exists.
   (`analyze_terraform` — brace-matched HCL resource blocks: public S3 ACL / disabled
   public-access-block, security groups open to 0.0.0.0/0 (HIGH on SSH/RDP/DB ports),
   unencrypted/public RDS·EBS·DynamoDB, IMDSv1 allowed, wildcard IAM Action:*, hardcoded
-  secrets), `cloudformation.py` (`analyze_cloudformation` — structured YAML/JSON with a
+  secrets; plus GCP — public GCS/allUsers, open firewall, public/no-SSL Cloud SQL,
+  public admin IAM; and Azure — public blob container, HTTP/weak-TLS storage, NSG open
+  to Internet, public SQL firewall, AKS RBAC disabled), `cloudformation.py` (`analyze_cloudformation` — structured YAML/JSON with a
   loader tolerant of `!Ref`/`!Sub` intrinsics; same rule set), `engine.py` (`IacScan`:
   walk a tree, auto-detect `.tf` vs CFN by `AWSTemplateFormatVersion`/`AWS::` types so
   K8s YAML isn't misread). Static, offline. CLI: `python3 -m deluluscan.iac --path
