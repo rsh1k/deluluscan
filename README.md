@@ -6,7 +6,7 @@ web, API, application, container/Kubernetes, cloud, and **LLM/AI-system** target
 [![PyPI](https://img.shields.io/pypi/v/deluluscan.svg)](https://pypi.org/project/deluluscan/)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-87_suites_green-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-88_suites_green-brightgreen.svg)](tests/)
 [![Local AI](https://img.shields.io/badge/AI-Claude%20%7C%20OpenAI%20%7C%20DeepSeek%20%7C%20Ollama-8a2be2.svg)](docs/LOCAL_MODELS.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -100,6 +100,7 @@ for running a model on a low-RAM / WSL / non-NVIDIA machine.
 | **Edge / network recon** | `netscan/` | WAF/CDN/proxy detection (**18 vendors**, wafw00f-style passive+active), TCP port/service scan + banner grab, **TLS/SSL config** (deprecated protocols, weak/expired/mismatched certs, no-PFS), honeypot heuristics, IDS/IPS inference, **SMB/LDAP posture** (signing, SMBv1, anonymous bind). |
 | **OSINT & takeover** | `recon/` | DNS/email intel (**SPF/DMARC/AXFR** + email harvest), **subdomain-takeover** fingerprints (14 providers, CNAME-corroborated). |
 | **Prioritization** | `epss/`,`kev/`,`priority/`,`attack/` | Ranks findings by real-world risk: **EPSS** exploit probability, **CISA KEV** (confirmed exploited), a combined **0–100 priority score**, and **MITRE ATT&CK** technique tagging. |
+| **Rules of Engagement** | `roe/` | Parse a RoE doc (YAML/JSON/text) and **enforce it**: in-scope/out-of-scope (host/domain/CIDR), prohibited tests, and testing window — wired into `assess --roe` to refuse out-of-scope/out-of-window runs before anything starts. |
 | **Repo DevSecOps scan** | `reposcan/` | **One command** over a whole repo: SAST + secrets, git-history secrets, IaC, containers/K8s+RBAC, CI/CD, SBOM — merged, deduped, ATT&CK/priority-enriched → md/html/json/SARIF. |
 | **Supply chain** | `depconfusion/`,`githistory/`,`subresource/`,`sbom/` | **Dependency confusion**, **secrets in git history**, **missing Subresource Integrity**, and **SBOM analysis** (CycloneDX/SPDX → known-vulnerable components like Log4Shell + integrity gaps). |
 | **Cloud IaC & CI/CD** | `iac/`,`cicd/`,`k8srbac/` | **Terraform + CloudFormation** misconfigs (AWS/GCP/Azure), **GitHub Actions** security (script injection, pwn requests, unpinned actions), **Kubernetes RBAC** (wildcard roles, escalation verbs, anonymous bindings). |
