@@ -14,6 +14,7 @@ import FindingsView from '@/components/FindingsView';
 import AccessMatrixView from '@/components/AccessMatrixView';
 import PentestReportView from '@/components/PentestReportView';
 import TelemetryView, { isTelemetryFinding } from '@/components/TelemetryView';
+import AttackChainGraph, { hasAttackChains } from '@/components/AttackChainGraph';
 import AttestationView from '@/components/AttestationView';
 import FindingDrawer from '@/components/FindingDrawer';
 import { Empty } from '@/components/ui';
@@ -21,13 +22,14 @@ import { Empty } from '@/components/ui';
 // (an external /logo-dark.svg cannot load when the HTML is opened standalone).
 import brandLogo from '@/logo-dark.svg?raw';
 
-type Tab = 'findings' | 'access' | 'telemetry' | 'report' | 'attestation';
+type Tab = 'findings' | 'chains' | 'access' | 'telemetry' | 'report' | 'attestation';
 const BASE_TABS: [Tab, string][] = [
   ['findings', 'Findings'],
   ['access', 'Users & Access'],
   ['report', 'Pentest Report'],
   ['attestation', 'Attestation'],
 ];
+const CHAINS_TAB: [Tab, string] = ['chains', 'Attack Chains'];
 const TELEMETRY_TAB: [Tab, string] = ['telemetry', 'Behavioral'];
 
 /** Hash routing: #<tab>[/<findingId>] — so a specific finding is linkable. */
@@ -35,7 +37,7 @@ function parseHash(): { tab: Tab; findingId: string | null } {
   const raw = decodeURIComponent((location.hash || '').replace(/^#/, ''));
   const [tab, ...rest] = raw.split('/');
   const id = rest.join('/');
-  const known: Tab[] = ['findings', 'access', 'telemetry', 'report', 'attestation'];
+  const known: Tab[] = ['findings', 'chains', 'access', 'telemetry', 'report', 'attestation'];
   return {
     tab: (known.includes(tab as Tab) ? tab : 'findings') as Tab,
     findingId: id || null,
@@ -53,10 +55,17 @@ function Dashboard({ scans }: { scans: Scan[] }) {
     () => Boolean(scan.meta?.telemetry) || scan.findings.some(isTelemetryFinding),
     [scan]
   );
-  const tabs = useMemo<[Tab, string][]>(
-    () => (hasTelemetry ? [...BASE_TABS.slice(0, 2), TELEMETRY_TAB, ...BASE_TABS.slice(2)] : BASE_TABS),
-    [hasTelemetry]
-  );
+  // The Attack Chains tab only appears when the correlate module actually
+  // combined findings into a chain — otherwise the graph would be empty.
+  const hasChains = useMemo(() => hasAttackChains(scan), [scan]);
+  const tabs = useMemo<[Tab, string][]>(() => {
+    const out: [Tab, string][] = [BASE_TABS[0]]; // Findings
+    if (hasChains) out.push(CHAINS_TAB); //          Attack Chains (synthesis)
+    out.push(BASE_TABS[1]); //                       Users & Access
+    if (hasTelemetry) out.push(TELEMETRY_TAB); //    Behavioral
+    out.push(BASE_TABS[2], BASE_TABS[3]); //         Pentest Report, Attestation
+    return out;
+  }, [hasChains, hasTelemetry]);
   const [triage, setTriage] = useState<TriageMap>(() => loadTriage(scan.id));
 
   useEffect(() => setTriage(loadTriage(scan.id)), [scan.id]);
@@ -188,6 +197,7 @@ function Dashboard({ scans }: { scans: Scan[] }) {
             selectedId={selected?.id ?? null}
           />
         )}
+        {tab === 'chains' && <AttackChainGraph scan={scan} onSelect={select} />}
         {tab === 'access' && <AccessMatrixView scan={scan} onSelect={select} />}
         {tab === 'telemetry' && <TelemetryView scan={scan} onSelect={select} />}
         {tab === 'report' && <PentestReportView scan={scan} triage={triage} />}
