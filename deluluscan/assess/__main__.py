@@ -51,7 +51,29 @@ def main(argv=None):
                    help="comma list: json,md,html,sarif,csv,xlsx,junit")
     p.add_argument("--out-dir", default="./deluluscan-report")
     p.add_argument("--allow-remote", action="store_true")
+    p.add_argument("--roe", help="Rules-of-Engagement doc (YAML/JSON/text): enforce scope, "
+                                 "prohibited tests, and testing window")
     a = p.parse_args(argv)
+
+    # Rules of Engagement: enforce scope + prohibited tests + window BEFORE anything runs.
+    roe = None
+    if a.roe:
+        from ..roe import load_roe
+        try:
+            roe = load_roe(a.roe)
+        except Exception as e:
+            raise SystemExit(f"[roe] could not read {a.roe}: {e}")
+        allowed, reason = roe.target_in_scope(a.url)
+        if not allowed:
+            raise SystemExit(f"[roe] {a.url} is not in scope per {a.roe} — {reason}. Refusing.")
+        if roe.allow_remote:
+            a.allow_remote = True          # RoE explicitly authorizes this in-scope target
+        if not roe.within_window():
+            raise SystemExit(f"[roe] outside the authorized testing window "
+                             f"({roe.window_start}-{roe.window_end}). Refusing.")
+        print(f"[roe] {a.url} in scope ({reason}); "
+              f"prohibited tests: {sorted(roe.excluded_tests) or '(none)'}")
+
     if not _is_local(a.url) and not a.allow_remote:
         raise SystemExit(f"[scope] {a.url} is not loopback/RFC1918; use --allow-remote if authorized.")
     mods = [m.strip() for m in a.modules.split(",")] if a.modules else None
@@ -63,6 +85,16 @@ def main(argv=None):
             mods = (["recon", "headers", "secrets", "netscan", "passive"]
                     + (["webapi"] if a.graphql else []))
         mods = mods + [m for m in optin if m not in mods]
+    # Drop any module the RoE prohibits (defaults resolve inside the runner, so
+    # materialize them here first when the RoE needs to filter).
+    if roe and roe.excluded_tests:
+        if mods is None:
+            mods = (["recon", "headers", "secrets", "netscan", "passive"]
+                    + (["webapi"] if a.graphql else []))
+        dropped = [m for m in mods if not roe.scanner_allowed(m)]
+        if dropped:
+            print(f"[roe] skipping prohibited module(s): {dropped}")
+        mods = [m for m in mods if roe.scanner_allowed(m)]
     assessment = run_web_assessment(a.url, domain=a.domain, graphql_url=a.graphql, modules=mods,
                                     sast_path=a.sast_path, spec_path=a.spec, sbom_path=a.sbom,
                                     netscan_ports=a.netscan_ports, epss=a.epss, kev=a.kev,

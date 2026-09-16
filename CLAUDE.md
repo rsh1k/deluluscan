@@ -114,6 +114,19 @@ via `--mantis-findings-dir` when the corpus exists.
   only, no publishing). CLI: `python3 -m deluluscan.assess --url … [--sast-path ./src] [--spec openapi.json]
   --formats md,html,json` (merges live web + source SAST + API-spec findings).
   `tests/test_assess.py`.
+- `deluluscan/roe/` — Rules-of-Engagement governance (machine-enforceable scope):
+  `policy.py` (`RoEPolicy` — `target_in_scope(url)` matches host/domain/subdomain/
+  wildcard/CIDR/IP with out-of-scope taking precedence; `scanner_allowed(name)`;
+  `within_window(now)` incl. midnight-crossing), `parse.py` (`parse_roe`/`load_roe`
+  — structured YAML/JSON is authoritative, plus a tolerant text/markdown fallback
+  that reads "In scope:/Out of scope:/Do not test:/Testing window:/Rate limit:"
+  headings; a bare word under an exclusion section is a prohibited TEST, a host-
+  like token is scope). Strengthens the authorization boundary — an in-scope target
+  + `allow_remote` authorizes a non-loopback host; out-of-scope always wins. Wired
+  into the assess CLI via `--roe`: refuses out-of-scope targets / outside the
+  window, and drops prohibited modules BEFORE anything runs. CLI:
+  `python3 -m deluluscan.roe --file roe.yaml [--check URL] [--scanner NAME]`.
+  Governance, not weaponization. `tests/test_roe.py`.
 - `deluluscan/reposcan/` — ONE static DevSecOps pass over a whole repo, tying the
   individual static analyzers together (no reimplementation — dispatches + merges):
   `RepoScan.scan(path)` runs SAST + secrets, git-history secrets (if `.git`),
