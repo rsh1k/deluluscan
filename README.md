@@ -117,7 +117,7 @@ for running a model on a low-RAM / WSL / non-NVIDIA machine.
 | **Containers / K8s** | `container/` | Dockerfile / Kubernetes / compose misconfig (privileged, host ns, docker-socket escape, caps, secrets) + exposed control planes. |
 | **Cloud (CSPM)** | `cloud/` | AWS/GCP/Azure posture over a collected inventory + SSRF→IMDS→credentials (values redacted). |
 | **Agentic exploitation** | `agentic/` | Bounded observe→act→verify loop over an allowlist of safe capabilities; human-in-the-loop for state changes; deterministic proof. |
-| **Correlation** | `correlate/` | Combine findings into attack chains (SSRF+metadata→cloud creds, XSS+cookie→session hijack) and feed the agent objectives to prove. |
+| **Correlation** | `correlate/` | Combine findings into attack chains (SSRF+metadata→cloud creds, XSS+cookie→session hijack), visualize them as an **Attack Chains** graph in the dashboard, and feed the agent objectives to prove. |
 | **AI layer** | `ai/`, `kb/` | Pluggable providers + an offline BM25 knowledge index (CVEs/advisories/Mantis) that grounds the AI. |
 | **Grey-box** | `telemetry/` | Tap the target container's logs/mem/CPU (`--observe`) and correlate server events to the exact probe. |
 | **Reporting** | `assess/`, `reporting/` | Merge findings → local **Markdown / HTML / JSON / SARIF / CSV / XLSX / JUnit**. No online publishing. |
