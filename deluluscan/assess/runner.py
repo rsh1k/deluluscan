@@ -88,6 +88,8 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
                        smuggling_send: Optional[Callable] = None,
                        adintel_smb_probe: Optional[Callable] = None,
                        adintel_ldap_probe: Optional[Callable] = None,
+                       shadow_fetch: Optional[Callable] = None,
+                       shadow_authorized_hosts: Optional[list] = None,
                        epss: bool = False, epss_fetch: Optional[Callable] = None,
                        kev: bool = False, kev_fetch: Optional[Callable] = None,
                        depconfusion: bool = False, depconfusion_check: Optional[Callable] = None) -> Assessment:
@@ -187,6 +189,19 @@ def run_web_assessment(target: str, *, domain: Optional[str] = None,
             a.add(finds, "adintel")
         except Exception:
             a.modules_run.append("adintel")
+
+    # shadow environments: OPT-IN. Derives staging/sandbox/dev variants of the
+    # target and diffs their posture against production. Only actively probes a
+    # variant that is in scope (loopback/RFC1918 or named in shadow_authorized_hosts);
+    # everything else is reported as an unprobed inventory lead.
+    if "shadow" in mods:
+        from ..shadowenv import ShadowEnvScan
+        try:
+            finds = ShadowEnvScan(fetch=shadow_fetch,
+                                  authorized_hosts=shadow_authorized_hosts or ()).scan(target)
+            a.add(finds, "shadow")
+        except Exception:
+            a.modules_run.append("shadow")
 
     # source + contract (offline; run whenever a path is supplied, independent of `mods`)
     if sast_path:

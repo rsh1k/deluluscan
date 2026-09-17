@@ -429,6 +429,20 @@ via `--mantis-findings-dir` when the corpus exists.
   `attach_attack(findings)` sets `detail["attack"]=[{tactic,id,name,url}]`. Runs
   ALWAYS in the assess pipeline (pure data, no network). Dashboard shows ATT&CK
   pills on the finding drawer. `tests/test_attack.py`.
+- `deluluscan/shadowenv.py` — shadow-environment detection: the staging/sandbox/dev
+  copy of production that quietly dropped a control (auth off, request-signing off,
+  introspection on, security headers absent) — the recurring root cause behind
+  AI-fuzzed API breaches (`*.sandbox.googleapis.com` → prod data). `derive_candidates`
+  builds env-variant hostnames (staging./staging-/…-staging/apex-level); `ShadowEnvScan`
+  resolves them and, for the ones in scope, diffs posture vs production → HIGH authz
+  (prod 401 but shadow 200 to the same anon request), MEDIUM misconfig (prod sets
+  security headers the shadow drops), INVENTORY (reachable). **Scope-respecting**: a
+  derived host is a DIFFERENT host, so it is NEVER actively probed unless loopback/
+  RFC1918 or named in `authorized_hosts` (RoE); an out-of-scope host that merely
+  resolves is an unprobed INVENTORY lead. Detection only; fetch/resolve/scope injected
+  → offline-testable. CLI: `python3 -m deluluscan.shadowenv --url … [--list]
+  [--authorize host,…]`. Opt-in assess module (`--shadow` / `--shadow-authorize`).
+  `tests/test_shadowenv.py`.
 - `deluluscan/depconfusion/` — dependency-confusion / namespace-squatting detection
   (Alex Birsan class): `parsers.py` (dependency-free manifest + private-registry-config
   parsers — package.json/requirements.txt/pyproject/composer.json/Gemfile, and

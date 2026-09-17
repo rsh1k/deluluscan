@@ -41,6 +41,11 @@ def main(argv=None):
                    help="run the timing-only HTTP request-smuggling detector (touches shared infra)")
     p.add_argument("--adintel", action="store_true",
                    help="run SMB/LDAP posture detection on the target host (detection-only)")
+    p.add_argument("--shadow", action="store_true",
+                   help="detect staging/sandbox/dev copies of the target and diff their "
+                        "security posture against production (scope-respecting)")
+    p.add_argument("--shadow-authorize", default="",
+                   help="comma-separated shadow hostnames you are authorized to actively probe")
     p.add_argument("--epss", action="store_true",
                    help="rank CVE findings by EPSS exploit probability (queries the FIRST.org API)")
     p.add_argument("--kev", action="store_true",
@@ -79,7 +84,7 @@ def main(argv=None):
     mods = [m.strip() for m in a.modules.split(",")] if a.modules else None
     # opt-in modules: append to the explicit list, or to the default set
     optin = [name for name, on in (("crawl", a.crawl), ("smuggling", a.smuggling),
-                                   ("adintel", a.adintel)) if on]
+                                   ("adintel", a.adintel), ("shadow", a.shadow)) if on]
     if optin:
         if mods is None:
             mods = (["recon", "headers", "secrets", "netscan", "passive"]
@@ -98,7 +103,9 @@ def main(argv=None):
     assessment = run_web_assessment(a.url, domain=a.domain, graphql_url=a.graphql, modules=mods,
                                     sast_path=a.sast_path, spec_path=a.spec, sbom_path=a.sbom,
                                     netscan_ports=a.netscan_ports, epss=a.epss, kev=a.kev,
-                                    depconfusion=a.depconfusion)
+                                    depconfusion=a.depconfusion,
+                                    shadow_authorized_hosts=[h.strip() for h in
+                                                             a.shadow_authorize.split(",") if h.strip()])
     payload = assessment.payload()
     written = write_reports(payload, a.out_dir, [f for f in a.formats.split(",") if f.strip()])
     print(f"[assess] {a.url}: {payload['meta']['finding_count']} finding(s) "
