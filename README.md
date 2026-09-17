@@ -37,7 +37,7 @@ leaves your host.
   *execute*; the live verifier *decides truth*. It never overwrites a re-test result.
 - **Runs on your terms.** Pluggable AI backends — Anthropic, OpenAI, **DeepSeek**, **Ollama
   (fully offline)**, Claude Code, Codex, Bedrock — with **secret redaction before send**.
-- **Knows what it's testing.** Fingerprints the platform (23 profiles — WordPress/Drupal/
+- **Knows what it's testing.** Fingerprints the platform (24 profiles — WordPress/Drupal/
   Joomla, Laravel/Django/Rails/Spring/Tomcat, Jenkins/GitLab/Grafana/Kibana, Elasticsearch/
   Kubernetes, …) and tests it accordingly: its API shape, auth model, sensitive surfaces,
   and **version-gated known CVEs** (Nessus-plugin model). Detects the **edge** too — WAF/CDN
@@ -96,7 +96,7 @@ for running a model on a low-RAM / WSL / non-NVIDIA machine.
 |---|---|---|
 | **Web / API scanning** | `scanners/`, `verify/` | 43 checks across the OWASP API/Web Top 10, with a deep differential verification layer (identity matrix, filter-bypass, read-back sink classification, weaponizability grading). Burp-style Intruder (sniper/battering-ram/pitchfork/cluster-bomb). |
 | **Reconnaissance** | `recon/` | Tech/JS-library fingerprint (+ known-vulnerable versions), CT-log subdomain enumeration, content discovery, and **static JS endpoint extraction** (fetch/axios/XHR → shadow API surface). |
-| **Platform intelligence** | `platforms/` | Fingerprints **23 platforms** (WordPress/Drupal/Joomla, Laravel/Django/Rails/Spring/Tomcat, Jenkins/GitLab/Grafana/Kibana, Elasticsearch/Kubernetes, …) → API shape, auth model, sensitive surfaces, user-enum & version disclosure, plus **version-gated known CVEs** (Nessus-plugin model). |
+| **Platform intelligence** | `platforms/` | Fingerprints **24 platforms** (WordPress/Drupal/Joomla/Quilzo, Laravel/Django/Rails/Spring/Tomcat, Jenkins/GitLab/Grafana/Kibana, Elasticsearch/Kubernetes, …) → API shape, auth model, sensitive surfaces, user-enum & version disclosure, plus **version-gated known CVEs** (Nessus-plugin model). |
 | **Edge / network recon** | `netscan/` | WAF/CDN/proxy detection (**18 vendors**, wafw00f-style passive+active), TCP port/service scan + banner grab, **TLS/SSL config** (deprecated protocols, weak/expired/mismatched certs, no-PFS), honeypot heuristics, IDS/IPS inference, **SMB/LDAP posture** (signing, SMBv1, anonymous bind). |
 | **OSINT & takeover** | `recon/` | DNS/email intel (**SPF/DMARC/AXFR** + email harvest), **subdomain-takeover** fingerprints (14 providers, CNAME-corroborated). |
 | **Prioritization** | `epss/`,`kev/`,`priority/`,`attack/` | Ranks findings by real-world risk: **EPSS** exploit probability, **CISA KEV** (confirmed exploited), a combined **0–100 priority score**, and **MITRE ATT&CK** technique tagging. |
