@@ -21,6 +21,40 @@ from ..verify import evidence as E
 
 _NUM_ID = re.compile(r"(\d{1,12})")
 
+# Canonical low object/tenant ids. The first accounts, tenants and records in
+# almost any system carry these — and they usually belong to SOMEONE ELSE (the
+# vendor's own test tenant, an early signup, an admin) no matter how large the
+# caller's own id is. Probing only the caller's neighbours misses cross-tenant
+# IDOR whenever the id space is large and sparse; a fixed low corpus is what
+# actually surfaces "read tenant #1's data as tenant #849213" (the pattern behind
+# AI-fuzzed cross-tenant API breaches). Kept small to bound the request budget.
+CANONICAL_CROSS_TENANT_IDS = (1, 2, 3, 100, 1000)
+
+
+def candidate_ids(base_id: int, *, neighbours=(-1, 1, 7),
+                  canonical=CANONICAL_CROSS_TENANT_IDS, limit: int = 8) -> list[int]:
+    """The other object-ids to try for a caller whose own id is `base_id`.
+
+    Neighbours first (they evidence a dense, sequential id space next to the
+    caller's own object), then the canonical low ids (other tenants). Excludes
+    base_id itself and any id < 1, de-duplicates, and caps at `limit` to keep the
+    probe bounded. Pure + deterministic so it can be unit-tested directly.
+    """
+    out: list[int] = []
+    seen: set[int] = set()
+
+    def add(n: int) -> None:
+        if n < 1 or n == base_id or n in seen:
+            return
+        seen.add(n)
+        out.append(n)
+
+    for d in neighbours:
+        add(base_id + d)
+    for n in canonical:
+        add(n)
+    return out[:limit]
+
 
 class IterableIdorScanner(Scanner):
     name = "idor_iter"
@@ -70,9 +104,7 @@ class IterableIdorScanner(Scanner):
             return
 
         hits = []
-        for n in (base_id - 1, base_id + 1, base_id + 7):
-            if n < 0 or n == base_id:
-                continue
+        for n in candidate_ids(base_id):
             rec = self.client.request("GET", with_id(n), identity_label=label, headers=headers)
             if rec is None or E.classify_response(rec) != E.DISPOSITION_CONTENT:
                 continue
@@ -89,8 +121,9 @@ class IterableIdorScanner(Scanner):
                 vuln_class=VulnClass.IDOR, severity=Severity.HIGH,
                 title="IDOR via iterable numeric identifier",
                 endpoint=endpoint.key,
-                description=(f"Changing the numeric id from {base_id} to neighbouring values "
-                             f"({', '.join(str(n) for n, _ in hits)}) returned distinct objects "
+                description=(f"Changing the numeric id from {base_id} to other values "
+                             f"({', '.join(str(n) for n, _ in hits)} — neighbours and canonical "
+                             f"low ids) returned distinct objects "
                              f"to a user who should only access their own. Iterable identifiers "
                              f"without an ownership check let an attacker enumerate and read "
                              f"other users' records. Enforce per-object authorization keyed to "
