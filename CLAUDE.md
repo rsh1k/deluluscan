@@ -277,9 +277,12 @@ via `--mantis-findings-dir` when the corpus exists.
   `fetch`. CLI: `python3 -m deluluscan.platforms --url … [--json]`.
   Docs: `docs/PLATFORM_INTELLIGENCE.md` (+ Nessus/Burp/ZAP capability map).
   `tests/test_platforms.py`. Add a platform = append a profile (data, not code).
-  Ships 23 profiles (WordPress/Drupal/Joomla/Ghost, Laravel/Django/Rails/Express/
+  Ships 24 profiles (WordPress/Drupal/Joomla/Ghost/Quilzo, Laravel/Django/Rails/Express/
   Spring-Boot/Tomcat, Magento/Shopify, Jenkins/GitLab/Grafana/Kibana/phpMyAdmin/
-  Atlassian, Elasticsearch/Kubernetes-API, AWS/GCP/Azure hosting). `exposed_checks`
+  Atlassian, Elasticsearch/Kubernetes-API, AWS/GCP/Azure hosting). Quilzo (a
+  hardened Go CMS) is fingerprinted by its `qz_`-token 401 API hint + the
+  "Sign in — Quilzo" admin page; a turnkey local harness (stand-up + identity
+  matrix + route spec + playbook) lives in `examples/quilzo/`. `exposed_checks`
   on a profile = data-driven live probes of its high-risk surfaces (Spring
   `/actuator/heapdump`, Jenkins `/script`, ES `/_cat/indices`, Laravel `/.env`).
   `cves.py` = version-gated known-CVE corpus (Nessus-plugin model): once a version

@@ -81,6 +81,66 @@ def test_drupal():
 
 
 # ---- No platform: nothing detected, no findings --------------------------
+def test_quilzo():
+    # Anon-observable Quilzo fingerprint: the API's 401 hint names the qz_ token,
+    # the admin root is a "Sign in — Quilzo" page under a default-src 'none' CSP.
+    csp = "default-src 'none'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'"
+    routes = {
+        "/": (401, {"content-security-policy": csp, "x-frame-options": "DENY"},
+              '<!doctype html><title>Sign in — Quilzo</title>'
+              '<body class="signin-page">paste a token</body>'),
+        "/signin": (200, {"content-security-policy": csp}, "<title>Sign in — Quilzo</title>"),
+        "/api/v1/pages": (401, {"content-type": "application/json"},
+                          '{"error":"not authenticated",'
+                          '"fix":"send a token: Authorization: Bearer qz_..."}'),
+        # correctly gated admin surfaces (401/403 => "control surface present")
+        "/access": (401, {}, "unauthorized"),
+        "/people": (403, {}, "forbidden"),
+        "/logs": (401, {}, "unauthorized"),
+        "/api/v1/graphql": (404, {}, "no such endpoint"),
+    }
+    scan = PlatformScan(fetch=make_fetch(routes))
+    det, findings = scan.run("http://t")
+    check("quilzo detected", det and det.profile.name == "Quilzo", det and det.profile.name)
+    check("quilzo confirmed", det and det.score >= 6, det and det.score)
+    check("quilzo API-hint signal fired", det and any("/api/v1/pages" in m for m in det.matched),
+          det and det.matched)
+    check("quilzo knows API base", det and det.profile.api_base == "/api/v1")
+    check("quilzo bearer+webauthn+oidc auth", det and set(("bearer", "webauthn", "oidc"))
+          <= set(det.profile.auth_methods), det and det.profile.auth_methods)
+    check("quilzo prioritizes authz", det and "authz" in det.profile.relevant_classes)
+    # no unauth user-enum or version disclosure surface is declared (a strength)
+    check("quilzo no user-enum surface", det and det.profile.users_endpoint == "")
+    check("quilzo no version surface", det and det.profile.version_path == "")
+    # a correctly-gated deployment => control-surface-present INFO notes, no criticals
+    sevs = [f.severity for f in findings]
+    check("quilzo gated => no critical/high on a locked-down box",
+          all(s not in (Severity.CRITICAL, Severity.HIGH) for s in sevs), sevs)
+    check("quilzo notes a present control surface",
+          any("control surface present" in f.title for f in findings),
+          [f.title for f in findings])
+
+
+def test_quilzo_misconfig_tripwire():
+    # If the admin access panel is reachable WITHOUT auth (200), the tripwire
+    # must escalate it to the declared severity (critical).
+    csp = "default-src 'none'"
+    routes = {
+        "/": (401, {"content-security-policy": csp}, '<title>Sign in — Quilzo</title>'
+              '<body class="signin-page"></body>'),
+        "/api/v1/pages": (401, {}, '{"fix":"send a token: Authorization: Bearer qz_..."}'),
+        "/access": (200, {}, "<h1>Access control</h1>everyone is admin"),  # MISCONFIG
+    }
+    scan = PlatformScan(fetch=make_fetch(routes))
+    det, findings = scan.run("http://t")
+    check("quilzo still detected", det and det.profile.name == "Quilzo")
+    crit = next((f for f in findings if f.endpoint == "/access"
+                 and f.severity == Severity.CRITICAL), None)
+    check("open /access escalated to CRITICAL", crit is not None,
+          [(f.endpoint, f.severity.value) for f in findings])
+    check("open /access is a MISCONFIG", crit and crit.vuln_class == VulnClass.MISCONFIG)
+
+
 def test_unknown():
     routes = {"/": (200, {}, "<html>plain static site</html>")}
     scan = PlatformScan(fetch=make_fetch(routes))

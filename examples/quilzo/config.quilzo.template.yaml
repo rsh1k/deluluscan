@@ -1,0 +1,32 @@
+# Deluluscan config for a local Quilzo target — rendered by setup_quilzo.sh.
+# (Placeholders __ADMIN__ etc. are filled with freshly-minted tokens.)
+#
+# Authorized testing of a LOCAL instance only. The loopback target keeps the
+# authorization boundary intact; do not point this at a host you are not
+# authorized to test.
+base_url: "http://127.0.0.1:__ADMIN_PORT__"     # the admin server (the sensitive interface)
+openapi_file: ""                                # pass examples/quilzo/quilzo_openapi.json on the CLI
+verify_tls: false
+allow_remote: false
+output_dir: "./deluluscan-out-quilzo"
+
+# Quilzo roles map onto Deluluscan's trust levels:
+#   admin -> alice, publisher -> bob, content_editor -> carol (author), readonly -> dave
+identities:
+  admin:
+    bearer_token: "__ADMIN__"
+  publisher:
+    bearer_token: "__PUBLISHER__"
+  content_editor:
+    bearer_token: "__EDITOR__"
+  readonly:
+    bearer_token: "__READER__"
+
+ai:
+  provider: "none"          # deterministic first; the live verifier is authoritative
+
+scan:
+  rate_limit_rps: 5.0       # Quilzo throttles failed auth per-source; keep probing gentle
+  timeout_s: 15.0
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+  allow_state_changing: false   # writes create drafts (immutable model); enable for a deeper pass

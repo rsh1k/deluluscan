@@ -121,6 +121,74 @@ PROFILES: list[PlatformProfile] = [
         auth_methods=("bearer", "api-key"), login_path="/ghost/",
         sensitive_paths=("/ghost/", "/ghost/api/admin/"),
         relevant_classes=("authz", "info_leak")),
+    # ---- Quilzo ----------------------------------------------------------
+    # A security-hardened Go CMS: immutable content, pointer-based publish, a
+    # non-executing template language, and bearer-token auth (roles reader/
+    # author/publisher/admin, narrowable with --read-only and --on <scope>).
+    # Whole classes (SQLi/SSTI) are absent by construction, so testing here is
+    # about ACCESS CONTROL, not injection: the RBAC matrix across identities,
+    # token scope/read-only enforcement, CSRF on the cookie path, SSRF via the
+    # server-side media fetch, and the WebAuthn/OIDC/Telegram sign-in flows.
+    # The distinctive anon fingerprint is the API's own 401 hint, which names
+    # the `qz_` token format outright.
+    PlatformProfile(
+        name="Quilzo", category="cms",
+        signals=[
+            # Highly specific: the content API's unauthenticated 401 body names
+            # the bearer-token scheme and the qz_ prefix. Works on both the
+            # admin server and the public site's --api.
+            Signal("path", "/api/v1/pages",
+                   pattern=r'Bearer qz_|"fix"\s*:\s*"send a token', statuses=(401,), weight=4),
+            # Admin sign-in page (bearer token is pasted; no password form).
+            Signal("body", "/", pattern=r"Sign in\s*[—–-]\s*Quilzo|class=\"signin-page\"", weight=3),
+            Signal("path", "/signin", pattern=r"(?i)quilzo", statuses=(200, 401), weight=2),
+            # The admin locks everything down to default-src 'none'; the public
+            # site forbids all scripts (script-src 'none').
+            Signal("header", "content-security-policy", pattern=r"default-src 'none'", weight=1.5),
+            Signal("header", "content-security-policy", pattern=r"script-src 'none'", weight=1.5),
+        ],
+        api_base="/api/v1", api_style="REST", api_discovery="/api/v1/pages",
+        auth_methods=("bearer", "cookie", "oidc", "webauthn"),
+        login_path="/signin",
+        # No unauthenticated user-enumeration surface and no unauthenticated
+        # version disclosure — both deliberate; leave these empty.
+        users_endpoint="", version_path="",
+        sensitive_paths=(
+            "/access", "/people", "/people/grant", "/people/revoke",
+            "/settings/save", "/types/save", "/types/delete", "/transfer/import",
+            "/sessions/revoke", "/publish", "/logs",
+            "/passkeys", "/signin/passkey/verify", "/signin/oidc", "/auth/callback",
+            "/api/v1/pages", "/api/v1/graphql", "/api/v1/replica/object/",
+            "/media/file/",
+        ),
+        # Tripwires: on a correctly-configured Quilzo every one of these returns
+        # 401/403 (reported INFO "control surface present"). A 200 here is a real
+        # misconfiguration — the severity is what it would mean if it were open.
+        exposed_checks=(
+            ("/access", "critical",
+             "Admin access-control panel — must never be reachable without an admin token."),
+            ("/people", "high",
+             "People & role grants — admin-only; reachability without auth is a privilege leak."),
+            ("/logs", "high",
+             "Audit-log viewer — admin-only; reachability leaks the security event stream."),
+            ("/api/v1/pages", "medium",
+             "Content API — expects a reader token; a 200 unauthenticated means anonymous "
+             "content/draft exposure."),
+            ("/api/v1/graphql", "medium",
+             "GraphQL endpoint — off by default; if reachable, test introspection and depth."),
+        ),
+        # authz = the RBAC/scope/BFLA matrix (the main surface); business_logic =
+        # CSRF + the publish/approval gates; crypto = token hashing + OIDC/WebAuthn
+        # signatures; ssrf = the server-side media fetch; misconfig = the exposed
+        # -check tripwires below.
+        relevant_classes=("authz", "business_logic", "crypto", "ssrf", "info_leak", "misconfig"),
+        remediation=(
+            "Keep the authorization boundary intact: admin surfaces require the admin "
+            "role, /publish requires publisher, content-type edits require publisher (not "
+            "author). Serve the admin behind TLS (so the SameSite=Strict session cookie "
+            "gets Secure) and never expose it off-host. Leave the auth throttle on. The "
+            "content API should require a reader token; only enable --api-writable "
+            "deliberately.")),
     # ---- Cloud hosting (response-header signals) -------------------------
     PlatformProfile(
         name="AWS (S3/CloudFront)", category="hosting",

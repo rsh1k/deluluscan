@@ -1,0 +1,892 @@
+{
+ "openapi": "3.0.0",
+ "info": {
+  "title": "Quilzo (reconstructed)",
+  "version": "pentest"
+ },
+ "servers": [
+  {
+   "url": "http://127.0.0.1:9080"
+  }
+ ],
+ "paths": {
+  "/api/v1/pages": {
+   "get": {
+    "summary": "List pages",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/api/v1/pages/{name}": {
+   "get": {
+    "summary": "Get a page by name (path-traversal + IDOR surface)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ]
+   }
+  },
+  "/api/v1/collections": {
+   "get": {
+    "summary": "List collections",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/api/v1/records/{id}": {
+   "get": {
+    "summary": "Get a record by id (IDOR surface)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ]
+   }
+  },
+  "/api/v1/replica/object/{id}": {
+   "get": {
+    "summary": "Get a content object by hash id (IDOR)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ]
+   }
+  },
+  "/api/v1/replica/ref/{ref}": {
+   "get": {
+    "summary": "Get a ref (draft|live)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "parameters": [
+     {
+      "name": "ref",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ]
+   }
+  },
+  "/api/v1/similar/{id}": {
+   "get": {
+    "summary": "Similar pages by id",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ]
+   }
+  },
+  "/api/v1/search/vector": {
+   "get": {
+    "summary": "Vector search",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "query",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "k",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ]
+   }
+  },
+  "/api/v1/graphql": {
+   "post": {
+    "summary": "GraphQL endpoint",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "query": {
+          "type": "string"
+         },
+         "variables": {
+          "type": "object"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/access": {
+   "get": {
+    "summary": "Access control panel (admin)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/people": {
+   "get": {
+    "summary": "People & grants (admin)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/logs": {
+   "get": {
+    "summary": "Audit log viewer (admin)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/settings": {
+   "get": {
+    "summary": "Settings (admin)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/types": {
+   "get": {
+    "summary": "Content types (admin)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/transfer": {
+   "get": {
+    "summary": "Import/export (admin)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/integrations": {
+   "get": {
+    "summary": "Integrations (admin)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/publishing": {
+   "get": {
+    "summary": "Publishing controls",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/profile": {
+   "get": {
+    "summary": "Own profile",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/passkeys": {
+   "get": {
+    "summary": "Passkeys",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/review": {
+   "get": {
+    "summary": "Review queue",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/history": {
+   "get": {
+    "summary": "History",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/records": {
+   "get": {
+    "summary": "Records",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/forms": {
+   "get": {
+    "summary": "Forms",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/media": {
+   "get": {
+    "summary": "Media library",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/structure": {
+   "get": {
+    "summary": "Site structure",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/theme": {
+   "get": {
+    "summary": "Theme",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   },
+   "post": {
+    "summary": "Set theme token (write/injection)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "token": {
+          "type": "string"
+         },
+         "value": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/design": {
+   "get": {
+    "summary": "Design",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/languages": {
+   "get": {
+    "summary": "Languages",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/listings": {
+   "get": {
+    "summary": "Listings",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/page/{name}": {
+   "get": {
+    "summary": "Edit a page (id-bearing)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ]
+   }
+  },
+  "/preview/{name}": {
+   "get": {
+    "summary": "Preview a page (id-bearing)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ]
+   }
+  },
+  "/media/file/{id}": {
+   "get": {
+    "summary": "Fetch a media file by id (IDOR/traversal)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ]
+   }
+  },
+  "/people/grant": {
+   "post": {
+    "summary": "Grant a role (ADMIN-only)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "who": {
+          "type": "string"
+         },
+         "role": {
+          "type": "string"
+         },
+         "on": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/people/revoke": {
+   "post": {
+    "summary": "Revoke a role (ADMIN-only)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "who": {
+          "type": "string"
+         },
+         "on": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/publish": {
+   "post": {
+    "summary": "Publish (PUBLISHER-only)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "ref": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/page/delete": {
+   "post": {
+    "summary": "Delete a page (write)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "name": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/settings/save": {
+   "post": {
+    "summary": "Save settings (ADMIN)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "key": {
+          "type": "string"
+         },
+         "value": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/types/save": {
+   "post": {
+    "summary": "Save content type (ADMIN)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "name": {
+          "type": "string"
+         },
+         "schema": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/types/delete": {
+   "post": {
+    "summary": "Delete content type (ADMIN)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "name": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/media/delete": {
+   "post": {
+    "summary": "Delete media (write)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/forms/save": {
+   "post": {
+    "summary": "Save a form (write)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "name": {
+          "type": "string"
+         },
+         "value": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/transfer/import": {
+   "post": {
+    "summary": "Import content (ADMIN; deser/traversal surface)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "format": {
+          "type": "string"
+         },
+         "data": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/sessions/revoke": {
+   "post": {
+    "summary": "Revoke a session (ADMIN)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/design/save": {
+   "post": {
+    "summary": "Save design/template (SSTI candidate)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "name": {
+          "type": "string"
+         },
+         "template": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/records/save": {
+   "post": {
+    "summary": "Save a record (write)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "value": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/listings/save": {
+   "post": {
+    "summary": "Save a listing/query (injection candidate)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "name": {
+          "type": "string"
+         },
+         "query": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  },
+  "/provenance/set": {
+   "post": {
+    "summary": "Set provenance (write)",
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "page": {
+          "type": "string"
+         },
+         "value": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     },
+     "required": true
+    }
+   }
+  }
+ }
+}
