@@ -305,10 +305,13 @@ via `--mantis-findings-dir` when the corpus exists.
   ReconEngine folds PASSIVE edge detection in automatically (`do_edge`, header-only).
   CLI: `python3 -m deluluscan.netscan --url … [--no-ports] [--json]`. `tests/test_netscan.py`.
 - `deluluscan/passive/` — passive response analysis (ZAP passive-scan parity, no
-  extra requests): `rules.py` (14 high-precision `PassiveRule`s over body/header/url
+  extra requests): `rules.py` (20 high-precision `PassiveRule`s over body/header/url
   — Java/Python/PHP/Ruby/.NET/Node stack traces + SQL errors (CWE-209), Werkzeug/
   Whoops/Django debug consoles (CWE-489), directory listing (CWE-548), internal-IP
-  disclosure (CWE-200), secrets-in-URL (CWE-598), HTML-comment leaks (CWE-615)),
+  disclosure (CWE-200), cloud internal-resource identifiers (CWE-200 — GCP service
+  accounts, AWS ARNs w/ account id, gs://·s3:// URIs, Azure resource ids, Spanner
+  resource paths; unambiguously-internal forms only, so CDN asset hosts don't trip
+  it), secrets-in-URL (CWE-598), HTML-comment leaks (CWE-615)),
   `engine.py` (`PassiveScan.analyze(status,url,headers,body)` / `.analyze_record` —
   runs rules + folds in `secrets.scan_text`; covers what headers/ & secrets/ don't).
   Runs over responses already captured, so it can analyze every response for free.

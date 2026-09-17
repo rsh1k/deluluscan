@@ -122,6 +122,35 @@ def test_orchestrator_passive_scanner_body_rules():
     check("body-rule finding marked passive", any(f.detail.get("passive") for f in findings))
 
 
+def test_cloud_identifier_disclosure():
+    ps = PassiveScan()
+    cases = {
+        "gcp-service-account": "caller svc-runner@acme-prod.iam.gserviceaccount.com denied",
+        "aws-arn": '{"principal":"arn:aws:iam::123456789012:role/prod-exec"}',
+        "gcs-uri": "restored from gs://acme-internal-backups/db/latest",
+        "s3-uri": "input s3://acme-private-exports/2026/",
+        "azure-resource-id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourceGroups/prod-rg/providers/x",
+        "gcp-spanner-resource": "resource projects/acme-prod/instances/main/databases/users not found",
+    }
+    for rule_id, body in cases.items():
+        f = ps.analyze(500, "http://t/err", {}, body)
+        check(f"{rule_id} fires", rule_id in ids(f), ids(f))
+        hit = next((x for x in f if x.detail.get("rule") == rule_id), None)
+        check(f"{rule_id} is info_leak", hit and hit.vuln_class == VulnClass.INFO_LEAK)
+        check(f"{rule_id} surfaces the identifier as evidence", hit and hit.detail.get("match"))
+    # precision: legitimate CDN/asset/email content must not trip these rules
+    cloud_ids = set(cases)
+    legit = [
+        '<img src="https://cdn.acme.com/logo.png"><a href="/projects/list">projects</a>',
+        '<script src="https://assets.s3.amazonaws.com/app.js"></script>',   # hostname, not s3:// URI
+        "questions? email support@acme.com",
+        "GET /api/v1/projects/42/instances returned 200",
+    ]
+    for body in legit:
+        fired = ids(ps.analyze(200, "http://t/ok", {}, body)) & cloud_ids
+        check(f"no cloud-id false positive on: {body[:38]}", not fired, fired)
+
+
 def test_rules_wellformed():
     sevs = {"info", "low", "medium", "high", "critical"}
     for r in RULES:

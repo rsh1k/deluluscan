@@ -99,6 +99,51 @@ RULES: list[PassiveRule] = [
                 "info_leak", "low", "Internal/private IP address disclosed",
                 "A private RFC1918 address in the response leaks internal network topology.",
                 "CWE-200", "tentative"),
+    # -- cloud internal-resource identifiers -------------------------------
+    # Not credentials (secrets/ covers those) but internal-topology disclosures
+    # that map a target's cloud footprint and seed cross-tenant / SSRF / IAM
+    # targeting — the "errors leak service accounts, buckets and internal
+    # resource names" signal behind AI-fuzzed cloud-API breaches. Only
+    # unambiguously-internal forms are matched, to keep the passive set low-noise
+    # (bare CDN bucket *hostnames* are deliberately NOT flagged — they appear in
+    # legitimate asset URLs).
+    PassiveRule("gcp-service-account", "body",
+                r"\b[a-z0-9][a-z0-9-]{4,}@[a-z0-9-]+\.(?:iam\.)?gserviceaccount\.com\b",
+                "info_leak", "low", "GCP service-account identity disclosed",
+                "A *.gserviceaccount.com principal in the response names an IAM identity — "
+                "useful for privilege-escalation and impersonation targeting.",
+                "CWE-200"),
+    PassiveRule("aws-arn", "body",
+                r"arn:aws[a-z0-9-]*:[a-z0-9-]+:[a-z0-9-]*:\d{12}:[\w./:+=@-]+",
+                "info_leak", "low", "AWS ARN (account id) disclosed",
+                "An ARN carrying a 12-digit account id leaks the AWS account and a named "
+                "resource (role/bucket/function) — internal topology for targeting.",
+                "CWE-200"),
+    PassiveRule("gcs-uri", "body",
+                r"\bgs://[a-z0-9][a-z0-9._-]{2,60}(?:/[^\s\"'<>]*)?",
+                "info_leak", "info", "Google Cloud Storage URI disclosed",
+                "A gs:// bucket reference names an internal storage location to probe for "
+                "public-access misconfiguration.",
+                "CWE-200", "tentative"),
+    PassiveRule("s3-uri", "body",
+                r"\bs3://[a-z0-9][a-z0-9.-]{2,60}(?:/[^\s\"'<>]*)?",
+                "info_leak", "info", "Amazon S3 URI disclosed",
+                "An s3:// bucket reference names an internal storage location to probe for "
+                "public-access misconfiguration.",
+                "CWE-200", "tentative"),
+    PassiveRule("azure-resource-id", "body",
+                r"/subscriptions/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+                r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/resourceGroups/[\w.-]+",
+                "info_leak", "low", "Azure resource id disclosed",
+                "An Azure /subscriptions/<guid>/resourceGroups/ path leaks the subscription "
+                "and resource-group layout.",
+                "CWE-200"),
+    PassiveRule("gcp-spanner-resource", "body",
+                r"\bprojects/[a-z0-9-]{4,}/instances/[a-z0-9-]+/databases/[a-z0-9-]+",
+                "info_leak", "low", "GCP internal resource path disclosed",
+                "A projects/…/instances/…/databases/… path names an internal Spanner/"
+                "database resource — internal service topology.",
+                "CWE-200", "tentative"),
     # -- sensitive data carried in the URL ---------------------------------
     PassiveRule("secret-in-url", "url",
                 r"(?i)[?&](?:password|passwd|pwd|token|access_token|api_?key|"
