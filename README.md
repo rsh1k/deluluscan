@@ -6,7 +6,7 @@ web, API, application, container/Kubernetes, cloud, and **LLM/AI-system** target
 [![PyPI](https://img.shields.io/pypi/v/deluluscan.svg)](https://pypi.org/project/deluluscan/)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-88_suites_green-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-91_suites_green-brightgreen.svg)](tests/)
 [![Local AI](https://img.shields.io/badge/AI-Claude%20%7C%20OpenAI%20%7C%20DeepSeek%20%7C%20Ollama-8a2be2.svg)](docs/LOCAL_MODELS.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -34,7 +34,9 @@ leaves your host.
   verdict (confirmed / likely / conditional / inconclusive / false-positive), a
   reproducible **CVSS v3.1** vector, and **compliance mappings** (PCI-DSS / SOC 2 / ISO 27001).
 - **AI as a force multiplier, not a black box.** The AI *proposes*; deterministic tools
-  *execute*; the live verifier *decides truth*. It never overwrites a re-test result.
+  *execute*; the live verifier *decides truth*. It never overwrites a re-test result, and
+  every AI note is **anchored to the captured traffic** — any claim the scan did not
+  observe is marked unverified rather than stated as fact (anti-hallucination).
 - **Runs on your terms.** Pluggable AI backends — Anthropic, OpenAI, **DeepSeek**, **Ollama
   (fully offline)**, Claude Code, Codex, Bedrock — with **secret redaction before send**.
 - **Knows what it's testing.** Fingerprints the platform (24 profiles — WordPress/Drupal/
@@ -98,7 +100,8 @@ for running a model on a low-RAM / WSL / non-NVIDIA machine.
 | **Reconnaissance** | `recon/` | Tech/JS-library fingerprint (+ known-vulnerable versions), CT-log subdomain enumeration, content discovery, and **static JS endpoint extraction** (fetch/axios/XHR → shadow API surface). |
 | **Platform intelligence** | `platforms/` | Fingerprints **24 platforms** (WordPress/Drupal/Joomla/Quilzo, Laravel/Django/Rails/Spring/Tomcat, Jenkins/GitLab/Grafana/Kibana, Elasticsearch/Kubernetes, …) → API shape, auth model, sensitive surfaces, user-enum & version disclosure, plus **version-gated known CVEs** (Nessus-plugin model). |
 | **Edge / network recon** | `netscan/` | WAF/CDN/proxy detection (**18 vendors**, wafw00f-style passive+active), TCP port/service scan + banner grab, **TLS/SSL config** (deprecated protocols, weak/expired/mismatched certs, no-PFS), honeypot heuristics, IDS/IPS inference, **SMB/LDAP posture** (signing, SMBv1, anonymous bind). |
-| **OSINT & takeover** | `recon/` | DNS/email intel (**SPF/DMARC/AXFR** + email harvest), **subdomain-takeover** fingerprints (14 providers, CNAME-corroborated). |
+| **OSINT & takeover** | `recon/` | DNS/email intel (**SPF/DMARC/AXFR** + email harvest), **subdomain-takeover** — live provider fingerprints (14 providers, CNAME-corroborated) **and dangling-CNAME (NXDOMAIN-target) takeover** inferred from DNS alone. |
+| **Shadow environments** | `shadowenv.py` | Derive staging/sandbox/dev host-variants of a target and **diff their security posture vs production** (auth dropped, security headers missing) — the staging-weaker-than-prod root cause; scope-respecting (out-of-scope hosts stay unprobed leads). |
 | **Prioritization** | `epss/`,`kev/`,`priority/`,`attack/` | Ranks findings by real-world risk: **EPSS** exploit probability, **CISA KEV** (confirmed exploited), a combined **0–100 priority score**, and **MITRE ATT&CK** technique tagging. |
 | **Rules of Engagement** | `roe/` | Parse a RoE doc (YAML/JSON/text) and **enforce it**: in-scope/out-of-scope (host/domain/CIDR), prohibited tests, and testing window — wired into `assess --roe` to refuse out-of-scope/out-of-window runs before anything starts. |
 | **Repo DevSecOps scan** | `reposcan/` | **One command** over a whole repo: SAST + secrets, git-history secrets, IaC, containers/K8s+RBAC, CI/CD, SBOM — merged, deduped, ATT&CK/priority-enriched → md/html/json/SARIF. |
@@ -106,7 +109,7 @@ for running a model on a low-RAM / WSL / non-NVIDIA machine.
 | **Cloud IaC & CI/CD** | `iac/`,`cicd/`,`k8srbac/` | **Terraform + CloudFormation** misconfigs (AWS/GCP/Azure), **GitHub Actions** security (script injection, pwn requests, unpinned actions), **Kubernetes RBAC** (wildcard roles, escalation verbs, anonymous bindings). |
 | **AI / MCP / agentic** | `llm/`,`mcp/`,`agentaudit/` | OWASP LLM Top 10 pentest, **MCP tool-poisoning** analysis, and **OWASP Agentic Top 10 (2026)** agent-config audit (excessive agency, memory poisoning, privilege abuse). |
 | **Client-side & crypto** | `csp.py`,`protopollution/`,`jwtaudit/` | **CSP bypass analysis** (Google-CSP-Evaluator-style), **client-side prototype pollution** (live-DOM proof), **offline JWT audit** with HS256 weak-secret cracking. |
-| **Passive analysis** | `passive/` | ZAP-style, no extra requests — stack traces / SQL errors, debug consoles (Werkzeug/Whoops/Django), directory listing, internal-IP & secrets-in-URL, HTML-comment leaks. Runs over every collected response. |
+| **Passive analysis** | `passive/` | ZAP-style, no extra requests — stack traces / SQL errors, debug consoles (Werkzeug/Whoops/Django), directory listing, internal-IP & **cloud internal-resource identifiers** (service accounts / buckets / ARNs), secrets-in-URL, HTML-comment leaks. Runs over every collected response. |
 | **Dynamic crawl** | `crawler/` | Optional headless-browser (Playwright) AJAX-spider: renders JS-heavy apps and captures the API calls the client actually makes — the dynamic surface a static parse can't resolve. |
 | **HTTP hardening** | `headers/` | Security headers, CORS (wildcard / reflected-origin-with-credentials), cookie flags. |
 | **Secrets** | `secrets/` | Credential exposure in responses & JS (AWS/GitHub/Google/Slack/Stripe/… + entropy-gated generic), matched **masked**. |
@@ -117,8 +120,8 @@ for running a model on a low-RAM / WSL / non-NVIDIA machine.
 | **Containers / K8s** | `container/` | Dockerfile / Kubernetes / compose misconfig (privileged, host ns, docker-socket escape, caps, secrets) + exposed control planes. |
 | **Cloud (CSPM)** | `cloud/` | AWS/GCP/Azure posture over a collected inventory + SSRF→IMDS→credentials (values redacted). |
 | **Agentic exploitation** | `agentic/` | Bounded observe→act→verify loop over an allowlist of safe capabilities; human-in-the-loop for state changes; deterministic proof. |
-| **Correlation** | `correlate/` | Combine findings into attack chains (SSRF+metadata→cloud creds, XSS+cookie→session hijack), visualize them as an **Attack Chains** graph in the dashboard, and feed the agent objectives to prove. |
-| **AI layer** | `ai/`, `kb/` | Pluggable providers + an offline BM25 knowledge index (CVEs/advisories/Mantis) that grounds the AI. |
+| **Correlation** | `correlate/` | Combine findings into attack chains (SSRF+metadata→cloud creds, XSS+cookie→session hijack, **shadow-env-auth-drop+data→cross-env access, subdomain-takeover+cookie→session/OAuth abuse, cloud-identifier-leak+SSRF→targeted SSRF**), visualize them as an **Attack Chains** graph in the dashboard, and feed the agent objectives to prove. |
+| **AI layer** | `ai/`, `kb/` | Pluggable providers + an offline BM25 knowledge index (CVEs/advisories/Mantis) that grounds the AI, plus **evidence anchoring** — every AI note is checked against the captured traffic and any claim the scan did not observe is marked unverified (anti-hallucination). |
 | **Grey-box** | `telemetry/` | Tap the target container's logs/mem/CPU (`--observe`) and correlate server events to the exact probe. |
 | **Reporting** | `assess/`, `reporting/` | Merge findings → local **Markdown / HTML / JSON / SARIF / CSV / XLSX / JUnit**. No online publishing. |
 
