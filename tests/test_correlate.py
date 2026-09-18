@@ -55,6 +55,31 @@ def test_works_on_plain_dicts():
               "description": "", "detail": {}}]
     check("correlate accepts results.json dicts", "ssrf-to-cloud-creds" in ids(correlate(dicts)))
 
+def test_shadow_env_crossenv_chain():
+    fs = [F(VulnClass.AUTHZ, "Shadow environment drops authentication: staging.app.com",
+            detail={"source": "shadowenv"}),
+          F(VulnClass.IDOR, "IDOR via iterable numeric identifier", detail={"source": "idor_iter"})]
+    check("shadow auth-drop + data finding -> cross-env chain",
+          "shadow-env-crossenv-access" in ids(correlate(fs)))
+    # the shadow finding alone (no data-bearing finding) does not form the chain
+    check("shadow finding alone -> no chain",
+          "shadow-env-crossenv-access" not in ids(correlate([fs[0]])))
+
+def test_takeover_session_chain():
+    fs = [F(VulnClass.MISCONFIG, "Dangling DNS takeover: blog.acme.com (AWS S3)",
+            detail={"source": "recon.takeover"}),
+          F(VulnClass.MISCONFIG, "Session cookie missing SameSite",
+            desc="cookie lacks SameSite", detail={"source": "headers"})]
+    check("subdomain takeover + cookie -> takeover-to-session chain",
+          "takeover-to-session" in ids(correlate(fs)))
+
+def test_cloud_id_ssrf_chain():
+    fs = [F(VulnClass.INFO_LEAK, "GCP service-account identity disclosed",
+            desc="svc@proj.iam.gserviceaccount.com", detail={"source": "passive"}),
+          F(VulnClass.SSRF, "Blind SSRF on url param", detail={"source": "ssrf"})]
+    check("cloud-id disclosure + SSRF -> cloud-id-to-ssrf chain",
+          "cloud-id-to-ssrf" in ids(correlate(fs)))
+
 def test_clean_findings_no_chains():
     fs = [F(VulnClass.MISCONFIG, "Missing HSTS"), F(VulnClass.INFO_LEAK, "Version disclosure via server")]
     check("unrelated findings produce no chains", correlate(fs) == [])

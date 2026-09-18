@@ -148,7 +148,10 @@ via `--mantis-findings-dir` when the corpus exists.
   `python3 -m deluluscan.apispec --spec openapi.json`. `tests/test_apispec.py`.
 - `deluluscan/correlate/` — attack-chain correlation: `chains.py` (rules combining
   findings — SSRF+IMDS->cloud creds, XSS+non-HttpOnly->session hijack, IDOR+admin->
-  privesc, leaked-secret->access, SQLi+data->exfil, GraphQL surface->mass abuse),
+  privesc, leaked-secret->access, SQLi+data->exfil, GraphQL surface->mass abuse,
+  shadow-env-auth-drop+data->cross-env access, subdomain-takeover+cookie/OAuth->
+  session abuse, cloud-identifier-disclosure+SSRF->targeted SSRF; `src()` predicate
+  matches a finding's producing module),
   `engine.py` (`correlate`/`chain_findings`/`objectives`: hypotheses stay tentative,
   feed WS-2 objectives). CLI: `python3 -m deluluscan.correlate --results results.json`.
   `tests/test_correlate.py`.

@@ -34,6 +34,12 @@ def all_of(*preds):
     return lambda f: all(p(f) for p in preds)
 
 
+def src(*sources):
+    """Match a finding by its producing module (detail['source'])."""
+    want = set(sources)
+    return lambda f: str((getattr(f, "detail", {}) or {}).get("source", "")) in want
+
+
 @dataclass
 class ChainRule:
     id: str
@@ -94,4 +100,41 @@ CHAIN_RULES = [
         "An introspected GraphQL surface with dangerous mutations next to a broken authz control "
         "is a prioritized mass-abuse path.",
         "Disable introspection in prod; enforce authorization per mutation."),
+    ChainRule(
+        "shadow-env-crossenv-access", "Shadow environment → cross-environment data access",
+        [all_of(cls(VulnClass.AUTHZ), src("shadowenv")),
+         cls(VulnClass.IDOR, VulnClass.INFO_LEAK, VulnClass.SQLI, VulnClass.BOPLA)],
+        Severity.HIGH,
+        "Read via the unauthenticated staging/sandbox copy the data production protects.",
+        "A staging/sandbox host that mirrors production but has dropped authentication, next to "
+        "a data-bearing finding, means the copy exposes without a credential what the hardened "
+        "original guards — the exact pattern behind several cross-tenant API breaches.",
+        "Put production's authentication in front of every environment, or keep non-production "
+        "off the public internet."),
+    ChainRule(
+        "takeover-to-session", "Subdomain takeover → cookie/OAuth abuse",
+        [all_of(cls(VulnClass.MISCONFIG), src("recon.takeover")),
+         kw("cookie", "samesite", "oauth", "redirect_uri", "session", "sso")],
+        Severity.HIGH,
+        "Claim the dangling subdomain and use it to read domain-scoped cookies or abuse the "
+        "OAuth redirect allowlist.",
+        "A claimable subdomain under the target's domain, next to a cookie scoped to that domain "
+        "or an OAuth redirect allowlist that trusts subdomains, lets an attacker who registers "
+        "the resource steal sessions or complete an OAuth code interception on a trusted origin.",
+        "Remove the dangling DNS record; scope cookies to an exact host; pin OAuth redirect_uris "
+        "to exact URLs, not subdomain wildcards."),
+    ChainRule(
+        "cloud-id-to-ssrf", "Disclosed cloud resource → SSRF target",
+        [all_of(cls(VulnClass.INFO_LEAK),
+                kw("service account", "gserviceaccount", "bucket", "s3://", "gs://",
+                   "ARN", "resource id", "resource path")),
+         cls(VulnClass.SSRF)],
+        Severity.HIGH,
+        "Point the SSRF at the disclosed internal cloud resource (bucket/metadata/service) to "
+        "read data or credentials.",
+        "An internal cloud identifier leaked in a response — a storage bucket, a service account, "
+        "an ARN — turns a blind SSRF into a targeted one: the attacker now knows exactly which "
+        "internal name to request.",
+        "Stop leaking internal resource identifiers in responses/errors; fix the SSRF egress "
+        "allowlist; scope the service account to least privilege."),
 ]
