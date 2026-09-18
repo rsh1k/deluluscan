@@ -135,7 +135,12 @@ class AIAnalyst:
             "evidence_excerpt": (ev.resp_body[:600] if ev else ""),
         }
         out = self._complete(_TRIAGE_SYS, json.dumps(ctx))
-        return out.strip()
+        # Evidence anchoring: the AI note is advisory, so any concrete claim it
+        # makes (a status, path, identity or value) that the finding's captured
+        # evidence does not contain is marked unverified rather than left to stand
+        # as fact in the report. The report may only state what the scan observed.
+        from .anchor import annotate
+        return annotate(out.strip(), finding)
 
     # -- backend (pluggable AIProvider) ------------------------------------
     def _complete(self, system: str, user: str) -> str:

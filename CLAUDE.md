@@ -206,8 +206,16 @@ via `--mantis-findings-dir` when the corpus exists.
 - `deluluscan/ai/` — pluggable AI layer (advisory): `providers.py` (one `AIProvider`
   interface → anthropic/openai/deepseek/openai_compat/ollama/claude_code/codex/bedrock,
   fail-soft, secret-redaction-before-send, multi-turn `chat()`), `analyst.py`
-  (prioritize/triage/analyze, delegates to the provider). `tests/test_ai_providers.py`,
-  `tests/test_bedrock_provider.py`. AI is advisory — the live verifier stays authoritative.
+  (prioritize/triage/analyze, delegates to the provider), `anchor.py` (evidence
+  anchoring — the AI-fuzzing anti-hallucination guard: extracts the concrete
+  claims in an AI note (status codes, paths, identity roles, quoted literal
+  values) and verifies each appears in the finding's captured evidence; unbacked
+  claims are marked "⚠ unverified" by `annotate()` before the note reaches the
+  report, and `anchor_findings()` batch-audits a result set. Pure text-vs-evidence,
+  wired into `analyst.triage`). `tests/test_ai_providers.py`,
+  `tests/test_bedrock_provider.py`, `tests/test_ai_anchor.py`. AI is advisory — the
+  live verifier stays authoritative, and now an AI claim the scan did not observe
+  cannot stand in the report as fact.
 - `deluluscan/llm/` — LLM/AI-system pentest pack (WS-3): `target.py` (LLMTarget: any
   chat endpoint via presets/response-path, or a WS-1 provider), `probes.py` (benign
   canary-based OWASP LLM Top 10 corpus incl. multi-turn crescendo), `engine.py`
