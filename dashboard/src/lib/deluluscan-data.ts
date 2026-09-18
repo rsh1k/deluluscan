@@ -99,6 +99,14 @@ export interface ScanMeta {
     findings?: number;
     dropped?: number;
   };
+  /** AI-note integrity (deluluscan/ai/anchor): how many AI triage notes made a
+   *  concrete claim the scan did not actually observe (a hallucination guard). */
+  ai_integrity?: {
+    ai_notes_audited?: number;
+    anchored?: number;
+    unverified?: number;
+    flagged?: { title?: string; endpoint?: string; coverage?: number; unanchored?: string[] }[];
+  };
   [k: string]: unknown;
 }
 

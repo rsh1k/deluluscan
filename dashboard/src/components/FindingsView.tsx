@@ -256,6 +256,32 @@ export default function FindingsView({ scan, triage, onSelect, selectedId }: {
             </div>
           );
         })()}
+        {(() => {
+          const ai = scan.meta?.ai_integrity;
+          if (!ai || !ai.ai_notes_audited) return null;
+          const unverified = ai.unverified ?? 0;
+          return (
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-800 pt-2.5 text-[11px]">
+              <span className="font-semibold text-slate-400">⚖ AI note integrity</span>
+              {unverified === 0 ? (
+                <span className="text-emerald-700">
+                  all {ai.ai_notes_audited} AI note{ai.ai_notes_audited === 1 ? '' : 's'} backed by
+                  captured evidence
+                </span>
+              ) : (
+                <span
+                  className="text-amber-600"
+                  title={(ai.flagged ?? [])
+                    .map((r) => `${r.endpoint}: ${(r.unanchored ?? []).join(', ')}`)
+                    .join('\n')}
+                >
+                  {unverified} of {ai.ai_notes_audited} AI note{ai.ai_notes_audited === 1 ? '' : 's'}{' '}
+                  made a claim the scan did not observe — treated as advisory only
+                </span>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,260px)_1fr]">
