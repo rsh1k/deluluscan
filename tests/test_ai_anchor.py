@@ -5,7 +5,8 @@ from __future__ import annotations
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from deluluscan.ai.anchor import (extract_claims, check_claims, annotate, anchor_findings)
+from deluluscan.ai.anchor import (extract_claims, check_claims, annotate, anchor_findings,
+                                  audit_ai_integrity)
 from deluluscan.ai.analyst import AIAnalyst
 from deluluscan.models import Finding, RequestRecord, VulnClass, Severity
 
@@ -87,6 +88,25 @@ def test_anchor_findings_batch():
     check("batch flag is the bad finding", flagged and flagged[0][0] is bad)
 
 
+def test_audit_ai_integrity_summary():
+    clean = _finding(); clean.ai_notes = "Anonymous read /api/v1/accounts/2 (200)."
+    dirty = _finding(); dirty.ai_notes = "Also 500 from /internal/dump."      # unbacked
+    # a note already annotated by annotate(): the audit must judge the AI's own
+    # statement (before the marker), and still flag the real unbacked claim.
+    annotated = _finding()
+    annotated.ai_notes = annotate("Backend hit /admin/panel and got 403.", annotated)
+    none = _finding()                                                        # no ai_notes
+    summary = audit_ai_integrity([clean, dirty, annotated, none])
+    check("audits only notes present", summary["ai_notes_audited"] == 3, summary)
+    check("counts the anchored note", summary["anchored"] == 1, summary)
+    check("counts both unverified notes", summary["unverified"] == 2, summary)
+    eps = {row["endpoint"] for row in summary["flagged"]}
+    check("flagged rows name the finding endpoint", eps == {"GET /api/v1/accounts/{id}"}, eps)
+    check("marker is stripped before re-audit (no double count)",
+          all("unverified:" not in c for row in summary["flagged"] for c in row["unanchored"]),
+          summary["flagged"])
+
+
 class _FakeProvider:
     def __init__(self, text): self.text = text
     def complete(self, system, user): return self.text
@@ -117,7 +137,8 @@ def test_triage_leaves_anchored_note_clean():
 def run():
     for fn in (test_extract_claims, test_anchored_when_backed, test_unanchored_is_flagged,
                test_empty_and_generic_text, test_anchor_findings_batch,
-               test_triage_annotates_hallucination, test_triage_leaves_anchored_note_clean):
+               test_triage_annotates_hallucination, test_triage_leaves_anchored_note_clean,
+               test_audit_ai_integrity_summary):
         fn()
     print(f"\n{_PASS} passed, {_FAIL} failed")
     return _FAIL == 0

@@ -211,7 +211,9 @@ via `--mantis-findings-dir` when the corpus exists.
   claims in an AI note (status codes, paths, identity roles, quoted literal
   values) and verifies each appears in the finding's captured evidence; unbacked
   claims are marked "⚠ unverified" by `annotate()` before the note reaches the
-  report, and `anchor_findings()` batch-audits a result set. Pure text-vs-evidence,
+  report, and `anchor_findings()`/`audit_ai_integrity()` batch-audit a result set
+  — the orchestrator puts the summary in `meta["ai_integrity"]` (how many AI notes
+  made a claim the scan did not observe, and which). Pure text-vs-evidence,
   wired into `analyst.triage`). `tests/test_ai_providers.py`,
   `tests/test_bedrock_provider.py`, `tests/test_ai_anchor.py`. AI is advisory — the
   live verifier stays authoritative, and now an AI claim the scan did not observe

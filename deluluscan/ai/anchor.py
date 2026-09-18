@@ -140,16 +140,48 @@ def annotate(text: str, finding=None, *, corpus: str = "", idents: set = None) -
             f"request/response records.")
 
 
+def _strip_marker(note: str) -> str:
+    """Audit the AI's own statement, not the '⚠ unverified' note annotate() added."""
+    return (note or "").split("\n⚠ unverified:", 1)[0]
+
+
 def anchor_findings(findings) -> list:
     """Batch report-integrity pass: return the findings whose ai_notes make a
     claim the finding's own evidence does not support. Used to audit a finished
     result set (and by the tests)."""
     flagged = []
     for f in findings:
-        note = getattr(f, "ai_notes", "") or ""
+        note = _strip_marker(getattr(f, "ai_notes", "") or "")
         if not note:
             continue
         res = check_claims(note, f)
         if not res.anchored:
             flagged.append((f, res.unanchored))
     return flagged
+
+
+def audit_ai_integrity(findings) -> dict:
+    """Report-level summary of AI-note anchoring across a whole result set — how
+    many findings carry an AI note, how many of those notes make a claim the scan
+    did not observe, and which. Goes in `meta["ai_integrity"]` so a report reader
+    can see the AI's reliability at a glance and never mistakes an unbacked AI
+    sentence for a measured fact."""
+    audited = 0
+    flagged: list = []
+    for f in findings:
+        note = _strip_marker(getattr(f, "ai_notes", "") or "").strip()
+        if not note:
+            continue
+        audited += 1
+        res = check_claims(note, f)
+        if not res.anchored:
+            flagged.append({
+                "title": getattr(f, "title", ""),
+                "endpoint": getattr(f, "endpoint", ""),
+                "coverage": round(res.coverage, 2),
+                "unanchored": [f"{k}:{v}" for k, v in res.unanchored[:8]],
+            })
+    return {"ai_notes_audited": audited,
+            "anchored": audited - len(flagged),
+            "unverified": len(flagged),
+            "flagged": flagged[:50]}

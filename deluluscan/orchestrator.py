@@ -899,6 +899,16 @@ class Orchestrator:
         except Exception:
             self.meta["probe_stats"] = {}
 
+        # AI integrity: audit every AI triage note against its finding's captured
+        # evidence, so an unbacked (hallucinated) AI claim is counted and named in
+        # the report rather than mistaken for a measured fact.
+        if self.ai.enabled:
+            try:
+                from .ai.anchor import audit_ai_integrity
+                self.meta["ai_integrity"] = audit_ai_integrity(self.findings)
+            except Exception:
+                pass
+
         # Grey-box observability summary (what the telemetry plane saw), so a
         # reader can tell an --observe run from a black-box one.
         if getattr(self, "_telemetry_summary", None):
