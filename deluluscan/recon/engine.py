@@ -282,10 +282,13 @@ class ReconEngine:
         """Check enumerated subdomains for dangling-DNS takeover fingerprints.
         Reuses the recon fetch. Fail-soft."""
         try:
-            from .takeover import check_subdomains
+            from .takeover import check_all
             def _fetch(url):
                 return self.fetch(url)
-            profile.takeover_findings = check_subdomains(_fetch, profile.subdomains)
+            # check_all adds the dangling-CNAME (NXDOMAIN-target) path on top of the
+            # live-fingerprint path, using the host resolver we already have.
+            profile.takeover_findings = check_all(_fetch, profile.subdomains,
+                                                  resolve_host=self.resolve)
         except Exception:
             pass
 
